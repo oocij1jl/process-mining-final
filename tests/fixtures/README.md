@@ -11,4 +11,4 @@
 | Resource coverage | R1 has 4 raw events and 3 discovery instances. R2 has 3 raw events and 2 discovery instances. Known coverage is 7/8 raw events and 5/6 instances. The C event in `001` has no resource. |
 | Handoffs | R1→R2 occurs once in `001`. R2→R1 occurs once in `002`. Each resource has 4 measured active minutes. Utilization is N/A because the fixture has no shifts. |
 
-The Phase 0 suite verifies the CSV data and the engine's explicit placeholder errors. The expected analysis values above support later engine tests.
+The engine tests verify the CSV contents and the calculated DFG, variants, durations, lifecycle gaps, and resource handoffs against the values above.
