@@ -10,7 +10,7 @@ import { Badge, Button, Card, KeyValue, Notice, PageHeader } from '../components
 import { planExport } from './ImplementationPage';
 import { WorkspaceHistory } from '../components/WorkspaceHistory';
 
-const APP_VERSION = '0.2.1-integration-phase2';
+const APP_VERSION = '0.3.0-ui';
 
 function section<T>(r: EngineResult<T> | null) {
   if (!r) return { status: 'not_computed' };
@@ -40,6 +40,8 @@ export function buildEvidence(a: Analysis, state: AppState, ws: ProcessWorkspace
       acceptExclusions: d.acceptExclusions,
       requireProcessType: d.requireProcessType,
       festivalAdapters: d.festival,
+      sourceFormat: d.format ?? 'csv',
+      festivalValidation: d.festival,
       festivalSettings: d.festival ? d.festivalSettings ?? null : null,
       metadata: d.metadata ?? null,
       manifest: d.manifest
@@ -86,6 +88,15 @@ export function buildEvidence(a: Analysis, state: AppState, ws: ProcessWorkspace
     scenarios: ws?.scenarios ?? [],
     selectedScenarioId: ws?.selectedScenarioId ?? null,
     plans: ws?.plans ?? [],
+    // v0.3 additive sections (absent on older exports).
+    activityEvidence: section(a.activityEvidence),
+    completionDefinition: ws?.completionActivities?.length ? { completionActivities: ws.completionActivities } : null,
+    automationCandidates: ws?.automation ?? [],
+    genericQueueParams: ws?.genericQueueParams ? { ...ws.genericQueueParams, revision: ws.genericParamsRevision ?? 0 } : null,
+    genericScenarios: ws?.genericScenarios ?? [],
+    bpmnRevisions: ws?.bpmnRevisions ?? [],
+    bpmnMappingOverrides: ws?.bpmnOverrides ?? [],
+    displayFilters: 'Minimum arrow counts, resource focus, replay cursor and highlights are display-only and never change these results.',
   };
 }
 
@@ -159,8 +170,9 @@ export function ExportPage({ navigate }: { navigate: (p: PageId) => void }) {
   return (
     <div>
       <PageHeader
+        phase="Evidence"
         title="Evidence Export"
-        subtitle="Download the current analysis, metric definitions, filter scope, dataset provenance, scenario configuration and plans. Exports serialize the same engine results shown on screen."
+        subtitle="Download the analysis, definitions, scope, provenance, designs, scenarios and plans. Exports contain the same engine results shown on screen."
       />
       <div className="mb-4 grid gap-4 lg:grid-cols-2">
         <Card title="Sample data & assets">

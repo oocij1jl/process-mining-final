@@ -1,9 +1,13 @@
 /**
- * Shared directed-graph view used by the DFG and the resource handoff network.
- * Renders engine outputs only: counts and case keys are passed in by the caller.
- * Layout (dagre) and stroke widths are presentation, not analysis.
+ * Shared directed-graph view used by the DFG, the performance map and the
+ * resource hand-over network. Renders engine outputs only: counts, labels and
+ * case keys are passed in by the caller. Layout (dagre), stroke widths and
+ * colours are presentation, not analysis.
+ *
+ * Layout is keyed by graph STRUCTURE (node and edge ids), so highlighting,
+ * selection and label changes never re-layout or move the viewport.
  */
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import {
   Background,
   BaseEdge,
@@ -36,6 +40,13 @@ export interface GraphNodeSpec {
   secondary?: string;
   /** Visually marks nodes without any edge (e.g. isolated resources). */
   isolated?: boolean;
+  /** Optional accent colour for the left bar (e.g. repeat highlight). */
+  accent?: string;
+  /** Optional small badge rendered at the top-right (e.g. "+2 repeats", replay token count). */
+  badge?: string;
+  badgeTone?: 'amber' | 'brand' | 'green' | 'slate' | 'red';
+  dim?: boolean;
+  highlight?: boolean;
 }
 
 export interface GraphEdgeSpec {
@@ -45,6 +56,14 @@ export interface GraphEdgeSpec {
   count: number;
   /** Start/end connectors are drawn lighter and excluded from width scaling. */
   terminal?: boolean;
+  /** Label text; defaults to the count. */
+  label?: string;
+  /** Stroke colour override (e.g. performance heat). */
+  color?: string;
+  /** Dashed "no measurement" style. */
+  noData?: boolean;
+  dim?: boolean;
+  highlight?: boolean;
 }
 
 export type GraphSelection = { type: 'node' | 'edge'; id: string } | null;
@@ -52,14 +71,15 @@ export type GraphSelection = { type: 'node' | 'edge'; id: string } | null;
 interface NodeData extends Record<string, unknown> {
   spec: GraphNodeSpec;
   selected: boolean;
+  dir: 'LR' | 'TB';
 }
 interface EdgeData extends Record<string, unknown> {
-  count: number;
+  spec: GraphEdgeSpec;
   width: number;
   shape: 'normal' | 'self' | 'pair';
   pairRole?: 'a' | 'b';
-  terminal: boolean;
-  highlighted: boolean;
+  selected: boolean;
+  dir: 'LR' | 'TB';
   onSelect: (id: string) => void;
   /** Dagre-routed waypoints plus the handle positions they were computed for. */
   route?: { points: Pt[]; source: Pt; target: Pt };
@@ -67,8 +87,8 @@ interface EdgeData extends Record<string, unknown> {
 type Pt = { x: number; y: number };
 
 const SIZE: Record<GraphNodeKind, { w: number; h: number }> = {
-  activity: { w: 190, h: 58 },
-  resource: { w: 180, h: 58 },
+  activity: { w: 196, h: 60 },
+  resource: { w: 184, h: 60 },
   start: { w: 64, h: 36 },
   end: { w: 64, h: 36 },
 };
@@ -78,23 +98,33 @@ const COLORS = {
   pairB: '#d97706',
   terminal: '#94a3b8',
   selected: '#4338ca',
+  highlight: '#4f46e5',
+};
+
+const BADGE: Record<NonNullable<GraphNodeSpec['badgeTone']>, string> = {
+  amber: 'bg-amber-500 text-white',
+  brand: 'bg-brand-600 text-white',
+  green: 'bg-emerald-600 text-white',
+  slate: 'bg-slate-600 text-white',
+  red: 'bg-red-600 text-white',
 };
 
 function PPNode({ data }: NodeProps<Node<NodeData>>) {
-  const { spec, selected } = data;
+  const { spec, selected, dir } = data;
   const handles = (
     <>
-      <Handle type="target" position={Position.Left} className="!h-2 !w-2 !border-0 !bg-slate-300" />
-      <Handle type="source" position={Position.Right} className="!h-2 !w-2 !border-0 !bg-slate-300" />
+      <Handle type="target" position={dir === 'TB' ? Position.Top : Position.Left} className="!h-2 !w-2 !border-0 !bg-slate-300" />
+      <Handle type="source" position={dir === 'TB' ? Position.Bottom : Position.Right} className="!h-2 !w-2 !border-0 !bg-slate-300" />
     </>
   );
   if (spec.kind === 'start' || spec.kind === 'end') {
     return (
       <div
         className={cx(
-          'flex h-9 w-16 items-center justify-center rounded-full border text-[11px] font-semibold uppercase tracking-wide',
+          'flex h-9 w-16 items-center justify-center rounded-full border text-[11px] font-semibold uppercase tracking-wide transition-opacity',
           spec.kind === 'start' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-400 bg-slate-100 text-slate-600',
           selected && 'ring-2 ring-brand-500',
+          spec.dim && 'opacity-35',
         )}
       >
         {spec.label}
@@ -105,18 +135,23 @@ function PPNode({ data }: NodeProps<Node<NodeData>>) {
   return (
     <div
       className={cx(
-        'flex h-[58px] flex-col justify-center rounded-md border bg-white px-3 shadow-sm',
-        spec.kind === 'resource' ? 'w-[180px] border-l-4 border-l-sky-500' : 'w-[190px] border-l-4 border-l-brand-500',
-        spec.isolated ? 'border-dashed border-slate-300' : 'border-slate-300',
+        'relative flex h-[60px] flex-col justify-center rounded-lg border bg-white px-3 shadow-sm transition-opacity',
+        spec.kind === 'resource' ? 'w-[184px]' : 'w-[196px]',
+        spec.isolated ? 'border-dashed border-slate-300' : spec.highlight ? 'border-brand-400' : 'border-slate-300',
         selected && 'ring-2 ring-brand-500 ring-offset-1',
+        spec.dim && 'opacity-35',
       )}
+      style={{ borderLeftWidth: 4, borderLeftColor: spec.accent ?? (spec.kind === 'resource' ? '#0ea5e9' : '#6366f1') }}
       title={spec.label}
     >
-      <div className="truncate text-[13px] font-semibold text-slate-800">{spec.label}</div>
-      <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-500 tabular">
-        {spec.primary && <span className="rounded bg-slate-100 px-1 font-medium text-slate-700">{spec.primary}</span>}
+      <div className="truncate text-[13.5px] font-semibold leading-tight text-slate-800">{spec.label}</div>
+      <div className="mt-1 flex items-center gap-2 text-[11.5px] text-slate-500 tabular">
+        {spec.primary && <span className="rounded bg-slate-100 px-1.5 font-semibold text-slate-700">{spec.primary}</span>}
         {spec.secondary && <span className="truncate">{spec.secondary}</span>}
       </div>
+      {spec.badge && (
+        <span className={cx('absolute -right-2 -top-2.5 rounded-full px-1.5 py-0.5 text-[10.5px] font-bold shadow-sm tabular', BADGE[spec.badgeTone ?? 'brand'])}>{spec.badge}</span>
+      )}
       {handles}
     </div>
   );
@@ -125,11 +160,18 @@ function PPNode({ data }: NodeProps<Node<NodeData>>) {
 function CountEdge(props: EdgeProps<Edge<EdgeData>>) {
   const { id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, markerEnd } = props;
   if (!data) return null;
+  const { spec } = data;
   let path: string;
   let lx: number;
   let ly: number;
-  if (data.shape === 'self') {
-    const lift = 70;
+  if (data.shape === 'self' && data.dir === 'TB') {
+    // Loop around the right side of the box (source = bottom centre, target = top centre).
+    const out = 150;
+    path = `M ${sourceX} ${sourceY} C ${sourceX + out} ${sourceY + 40}, ${targetX + out} ${targetY - 40}, ${targetX} ${targetY}`;
+    lx = sourceX + out * 0.76;
+    ly = (sourceY + targetY) / 2;
+  } else if (data.shape === 'self') {
+    const lift = 72;
     path = `M ${sourceX} ${sourceY} C ${sourceX + 60} ${sourceY - lift}, ${targetX - 60} ${targetY - lift}, ${targetX} ${targetY}`;
     lx = (sourceX + targetX) / 2;
     ly = sourceY - lift * 0.78;
@@ -165,13 +207,8 @@ function CountEdge(props: EdgeProps<Edge<EdgeData>>) {
   } else {
     [path, lx, ly] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition });
   }
-  const color = data.highlighted
-    ? COLORS.selected
-    : data.terminal
-      ? COLORS.terminal
-      : data.pairRole === 'b'
-        ? COLORS.pairB
-        : COLORS.edge;
+  const color = edgeColor(data);
+  const emphasised = data.selected || spec.highlight;
   return (
     <>
       <BaseEdge
@@ -181,8 +218,10 @@ function CountEdge(props: EdgeProps<Edge<EdgeData>>) {
         interactionWidth={18}
         style={{
           stroke: color,
-          strokeWidth: data.highlighted ? data.width + 1 : data.width,
-          strokeDasharray: data.terminal ? '4 4' : data.pairRole === 'b' ? '7 4' : undefined,
+          strokeWidth: emphasised ? data.width + 1.5 : data.width,
+          strokeDasharray: spec.terminal || spec.noData ? '4 4' : data.pairRole === 'b' && !spec.color ? '7 4' : undefined,
+          opacity: spec.dim ? 0.16 : 1,
+          transition: 'opacity 150ms',
         }}
       />
       <EdgeLabelRenderer>
@@ -190,21 +229,38 @@ function CountEdge(props: EdgeProps<Edge<EdgeData>>) {
           type="button"
           onClick={() => data.onSelect(id)}
           className={cx(
-            'nodrag nopan absolute rounded border px-1.5 py-px text-[11px] font-semibold shadow-sm tabular',
-            data.highlighted
-              ? 'border-brand-500 bg-brand-600 text-white'
-              : data.pairRole === 'b'
-                ? 'border-amber-300 bg-amber-50 text-amber-800'
-                : 'border-slate-200 bg-white text-slate-700',
+            'nodrag nopan absolute rounded-md border px-1.5 py-px text-[11.5px] font-semibold shadow-sm tabular transition-opacity',
+            data.selected
+              ? 'border-brand-600 bg-brand-600 text-white'
+              : spec.highlight
+                ? 'border-brand-300 bg-brand-50 text-brand-800'
+                : spec.noData
+                  ? 'border-slate-200 bg-white text-slate-400'
+                  : 'border-slate-200 bg-white text-slate-700',
           )}
-          style={{ transform: `translate(-50%, -50%) translate(${lx}px, ${ly}px)`, pointerEvents: 'all' }}
-          aria-label={`Edge count ${data.count}`}
+          style={{
+            transform: `translate(-50%, -50%) translate(${lx}px, ${ly}px)`,
+            pointerEvents: 'all',
+            opacity: spec.dim ? 0.3 : 1,
+            ...(spec.color && !data.selected && !spec.highlight ? { borderColor: spec.color, color: '#0f172a' } : {}),
+          }}
+          aria-label={`Transition ${spec.label ?? spec.count}`}
         >
-          {data.count.toLocaleString('en-US')}
+          {spec.label ?? spec.count.toLocaleString('en-US')}
         </button>
       </EdgeLabelRenderer>
     </>
   );
+}
+
+function edgeColor(data: EdgeData): string {
+  const { spec } = data;
+  if (data.selected) return COLORS.selected;
+  if (spec.highlight) return COLORS.highlight;
+  if (spec.color) return spec.color;
+  if (spec.terminal) return COLORS.terminal;
+  if (data.pairRole === 'b') return COLORS.pairB;
+  return COLORS.edge;
 }
 
 const nodeTypes = { pp: PPNode };
@@ -212,7 +268,7 @@ const edgeTypes = { count: CountEdge };
 
 function layout(nodes: GraphNodeSpec[], edges: GraphEdgeSpec[], rankdir: 'LR' | 'TB') {
   const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir, nodesep: 46, ranksep: 90, marginx: 20, marginy: 20 });
+  g.setGraph(rankdir === 'TB' ? { rankdir, nodesep: 70, ranksep: 64, marginx: 20, marginy: 20 } : { rankdir, nodesep: 48, ranksep: 96, marginx: 20, marginy: 20 });
   g.setDefaultEdgeLabel(() => ({}));
   for (const n of nodes) g.setNode(n.id, { width: SIZE[n.kind].w, height: SIZE[n.kind].h });
   for (const e of edges) if (e.source !== e.target) g.setEdge(e.source, e.target);
@@ -234,25 +290,34 @@ function layout(nodes: GraphNodeSpec[], edges: GraphEdgeSpec[], rankdir: 'LR' | 
     const ts = SIZE[kind.get(e.target)!];
     routes.set(`${e.source}\u0000${e.target}`, {
       points: pts.slice(1, -1),
-      source: { x: sp.x + ss.w, y: sp.y + ss.h / 2 },
-      target: { x: tp.x, y: tp.y + ts.h / 2 },
+      source: rankdir === 'TB' ? { x: sp.x + ss.w / 2, y: sp.y + ss.h } : { x: sp.x + ss.w, y: sp.y + ss.h / 2 },
+      target: rankdir === 'TB' ? { x: tp.x + ts.w / 2, y: tp.y } : { x: tp.x, y: tp.y + ts.h / 2 },
     });
   }
   return { pos, routes };
 }
 
-interface FlowGraphProps {
+export interface FlowGraphProps {
   nodes: GraphNodeSpec[];
   edges: GraphEdgeSpec[];
   selection: GraphSelection;
   onSelect: (selection: GraphSelection) => void;
-  height?: number;
+  height?: number | string;
   rankdir?: 'LR' | 'TB';
+  /** Changing this value re-fits the view (e.g. entering fullscreen). */
+  fitKey?: string | number;
 }
 
-function FlowGraphInner({ nodes, edges, selection, onSelect, height = 520, rankdir = 'LR' }: FlowGraphProps) {
+function FlowGraphInner({ nodes, edges, selection, onSelect, height = 520, rankdir = 'TB', fitKey }: FlowGraphProps) {
   const { fitView } = useReactFlow();
-  const { pos: positions, routes } = useMemo(() => layout(nodes, edges, rankdir), [nodes, edges, rankdir]);
+  const structureKey = useMemo(
+    () => `${rankdir}|${nodes.map((n) => `${n.id}:${n.kind}`).join('\u0001')}|${edges.map((e) => `${e.source}>${e.target}`).join('\u0001')}`,
+    [nodes, edges, rankdir],
+  );
+  const latest = useRef({ nodes, edges });
+  latest.current = { nodes, edges };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const { pos: positions, routes } = useMemo(() => layout(latest.current.nodes, latest.current.edges, rankdir), [structureKey]);
 
   const maxCount = useMemo(() => Math.max(1, ...edges.filter((e) => !e.terminal).map((e) => e.count)), [edges]);
 
@@ -262,9 +327,9 @@ function FlowGraphInner({ nodes, edges, selection, onSelect, height = 520, rankd
         id: spec.id,
         type: 'pp',
         position: positions.get(spec.id) ?? { x: 0, y: 0 },
-        data: { spec, selected: selection?.type === 'node' && selection.id === spec.id },
+        data: { spec, selected: selection?.type === 'node' && selection.id === spec.id, dir: rankdir },
       })),
-    [nodes, positions, selection],
+    [nodes, positions, selection, rankdir],
   );
 
   const rfEdges = useMemo<Edge<EdgeData>[]>(() => {
@@ -273,36 +338,38 @@ function FlowGraphInner({ nodes, edges, selection, onSelect, height = 520, rankd
     return edges.map((e) => {
       const self = e.source === e.target;
       const hasReverse = !self && ids.has(`${e.target}\u0000${e.source}`);
-      const highlighted = selection?.type === 'edge' && selection.id === e.id;
-      const width = e.terminal ? 1.25 : 1.25 + 4.75 * (e.count / maxCount);
-      const color = highlighted ? COLORS.selected : e.terminal ? COLORS.terminal : hasReverse && e.source > e.target ? COLORS.pairB : COLORS.edge;
+      const selected = selection?.type === 'edge' && selection.id === e.id;
+      const width = e.terminal ? 1.25 : 1.5 + 5 * (e.count / maxCount);
+      const data: EdgeData = {
+        spec: e,
+        width,
+        shape: self ? 'self' : hasReverse ? 'pair' : 'normal',
+        pairRole: hasReverse ? (e.source < e.target ? 'a' : 'b') : undefined,
+        selected,
+        dir: rankdir,
+        onSelect: selectEdge,
+        route: !self && !hasReverse ? routes.get(`${e.source}\u0000${e.target}`) : undefined,
+      };
+      const color = edgeColor(data);
       return {
         id: e.id,
         source: e.source,
         target: e.target,
         type: 'count',
+        zIndex: selected || e.highlight ? 10 : 0,
         markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14, color, markerUnits: 'userSpaceOnUse' },
-        data: {
-          count: e.count,
-          width,
-          shape: self ? 'self' : hasReverse ? 'pair' : 'normal',
-          pairRole: hasReverse ? (e.source < e.target ? 'a' : 'b') : undefined,
-          terminal: !!e.terminal,
-          highlighted,
-          onSelect: selectEdge,
-          route: rankdir === 'LR' && !self && !hasReverse ? routes.get(`${e.source}\u0000${e.target}`) : undefined,
-        },
+        data,
       };
     });
   }, [edges, maxCount, selection, onSelect, routes, rankdir]);
 
   useEffect(() => {
-    const t = setTimeout(() => fitView({ padding: 0.15, duration: 200, maxZoom: 1.1 }), 30);
+    const t = setTimeout(() => fitView({ padding: 0.1, duration: 200, maxZoom: 1.1 }), 40);
     return () => clearTimeout(t);
-  }, [positions, fitView]);
+  }, [structureKey, fitKey, fitView]);
 
   return (
-    <div style={{ height }} className="rounded-md border border-slate-200 bg-slate-50/50">
+    <div style={{ height }} className="relative">
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
@@ -316,12 +383,12 @@ function FlowGraphInner({ nodes, edges, selection, onSelect, height = 520, rankd
         minZoom={0.1}
         maxZoom={2.5}
         fitView
-        fitViewOptions={{ padding: 0.15, maxZoom: 1.1 }}
+        fitViewOptions={{ padding: 0.12, maxZoom: 1.15 }}
         proOptions={{ hideAttribution: false }}
       >
-        <Background gap={18} color="#e2e8f0" />
+        <Background gap={20} color="#e2e8f0" />
         <Controls showInteractive={false} position="bottom-left" />
-        {nodes.length > 10 && <MiniMap pannable zoomable className="!rounded-md !border !border-slate-200" nodeColor="#c7d2fe" maskColor="rgba(241,245,249,0.7)" />}
+        {nodes.length > 12 && <MiniMap pannable zoomable className="!rounded-lg !border !border-slate-200" nodeColor="#c7d2fe" maskColor="rgba(241,245,249,0.7)" />}
       </ReactFlow>
     </div>
   );
@@ -339,14 +406,14 @@ export function GraphLegend({ pairs }: { pairs?: boolean }) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
       <span className="inline-flex items-center gap-1.5">
-        <span className="inline-block h-[3px] w-6 rounded bg-slate-500" /> Edge width ∝ count
+        <span className="inline-block h-[3px] w-6 rounded bg-slate-500" /> Line width = how often
       </span>
       {pairs && (
         <span className="inline-flex items-center gap-1.5">
-          <span className="inline-block h-0 w-6 border-t-2 border-dashed border-amber-600" /> Reverse direction of a bidirectional pair (counted separately)
+          <span className="inline-block h-0 w-6 border-t-2 border-dashed border-amber-600" /> Opposite direction (counted separately)
         </span>
       )}
-      <span>Scroll to zoom · drag to pan · click a node, edge or count for contributing cases</span>
+      <span>Click a box, arrow or number for the cases behind it</span>
     </div>
   );
 }

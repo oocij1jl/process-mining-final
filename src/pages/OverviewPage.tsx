@@ -1,165 +1,85 @@
-import { useEffect, useMemo, useState, type DragEvent } from 'react';
-import { DEFAULT_MISSING_RESOURCES, type ColumnMapping, type DatasetMetadata, type Issue } from '../contracts';
-import { ENGINE_FUNCTIONS, type EngineResult } from '../adapters/engineAdapter';
+import { useMemo, useState, type DragEvent, type ReactNode } from 'react';
+import { callEngine, hasCapability, type EngineResult } from '../adapters/engineAdapter';
 import { UI_FIXTURE_CSV, UI_FIXTURE_DATASET_NAME } from '../adapters/fixtures/uiFixture';
-import { FESTIVAL_FIELDS, parseManifest, settingsFromManifest, type FestivalManifest } from '../festival/adapter';
+import { FESTIVAL_PROCESS_INFO } from '../festival/adapter';
+import { useFestivalManifest } from '../festival/useManifest';
+import { ORDER_SAMPLE_CSV, ORDER_SAMPLE_DESCRIPTION, ORDER_SAMPLE_MAPPING, ORDER_SAMPLE_NAME } from '../samples/orderProcessing';
+import type { XesImportResult } from '../v03-contracts';
 import { useAnalysis } from '../state/analysis';
-import { datasetIdFor, useStore } from '../state/store';
-import type { DatasetState, PageId, SourceKind } from '../state/types';
-import { downloadText, engineRows, fingerprint, parseCsv, type ParsedCsv } from '../lib/files';
-import { caseLabel, fmtInstant, fmtMinutes, plural, processLabel } from '../lib/format';
-import { ProviderBadge, SourceBadge, sourceRowOf } from '../components/layout';
+import { useStore } from '../state/store';
+import type { AnalysisMode, PageId } from '../state/types';
+import { downloadText, parseCsv } from '../lib/files';
+import { fmtMinutes, fmtShare, plural, processLabel } from '../lib/format';
+import { kpiName } from '../lib/kpiCatalog';
+import { ProcessPilotMark } from '../components/layout';
+import { Icon, type IconName } from '../components/icons';
+import { Badge, Button, Card, EngineGate, KeyValue, Notice, PageHeader, cx } from '../components/ui';
+import { AdvancedDataDetails, DataCheck, TraceTable } from './overview/DataDetails';
 import {
-  Badge,
-  Button,
-  Card,
-  EmptyState,
-  EngineGate,
-  Field,
-  Input,
-  KeyValue,
-  Notice,
-  PageHeader,
-  Select,
-  Stat,
-  Table,
-  Td,
-  Th,
-  cx,
-} from '../components/ui';
+  MappingEditor,
+  XES_LIMITS,
+  XesPreview,
+  datasetFromDraft,
+  datasetFromXes,
+  draftFromText,
+  draftProblems,
+  parsePlaceholders,
+  type Draft,
+  type XesDraft,
+} from './overview/DataImport';
 
-const REQUIRED = ['case_id', 'activity', 'timestamp'] as const;
-/** General event-log fields (DATA_SCHEMA §1). Festival case-study fields are listed separately. */
-const OPTIONAL = ['event_id', 'process_type', 'lifecycle', 'activity_instance_id', 'resource', 'resource_id', 'resource_role', 'cost'] as const;
-const ALL_FIELDS: readonly string[] = [...REQUIRED, ...OPTIONAL, ...FESTIVAL_FIELDS];
-
-type ManifestState =
-  | { status: 'loading' }
-  | { status: 'missing'; message: string }
-  | { status: 'ready'; manifest: FestivalManifest; warnings: string[] };
-
-function useFestivalManifest(): ManifestState {
-  const [state, setState] = useState<ManifestState>({ status: 'loading' });
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`${import.meta.env.BASE_URL}datasets/dataset_manifest.json`, { cache: 'no-cache' })
-      .then(async (res) => {
-        const type = res.headers.get('content-type') ?? '';
-        if (!res.ok || !type.includes('json')) throw new Error('dataset_manifest.json is not published yet.');
-        const { manifest, errors } = parseManifest(await res.json());
-        if (!manifest) throw new Error(`Invalid dataset_manifest.json: ${errors.join(' ')}`);
-        if (!cancelled) setState({ status: 'ready', manifest, warnings: errors });
-      })
-      .catch((e: unknown) => !cancelled && setState({ status: 'missing', message: e instanceof Error ? e.message : String(e) }));
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-  return state;
-}
-
-function autoMapping(headers: string[]): Record<string, string> {
-  const lower = new Map(headers.map((h) => [h.trim().toLowerCase(), h]));
-  const alias: Record<string, string[]> = {
-    case_id: ['case_id', 'case', 'caseid', 'case:concept:name'],
-    activity: ['activity', 'concept:name', 'activity_name', 'event'],
-    timestamp: ['timestamp', 'time:timestamp', 'time', 'datetime'],
-    resource: ['resource', 'org:resource'],
-    lifecycle: ['lifecycle', 'lifecycle:transition'],
-  };
-  const out: Record<string, string> = {};
-  for (const field of ALL_FIELDS) {
-    for (const name of alias[field] ?? [field]) {
-      const hit = lower.get(name);
-      if (hit && !Object.values(out).includes(hit)) {
-        out[field] = hit;
-        break;
-      }
-    }
-  }
-  return out;
-}
-
-interface Draft {
-  sourceName: string;
-  sourceKind: SourceKind;
-  text: string;
-  parsed: ParsedCsv;
-  mapping: Record<string, string>;
-  missingResources: string;
-  fixedOffset: string;
-  requireProcessType: boolean;
-  metadata?: DatasetMetadata;
-  festival: boolean;
-  manifest?: FestivalManifest;
-  /** Explicit consent to exclude structurally malformed rows (required when any exist). */
-  excludeMalformed: boolean;
-}
-
-function draftFromText(text: string, sourceName: string, sourceKind: SourceKind, extra?: Partial<Draft>): Draft {
-  const parsed = parseCsv(text);
-  return {
-    sourceName,
-    sourceKind,
-    text,
-    parsed,
-    mapping: autoMapping(parsed.headers),
-    missingResources: DEFAULT_MISSING_RESOURCES.map((v) => (v === '' ? '(blank)' : v)).join(', '),
-    fixedOffset: '',
-    requireProcessType: false,
-    festival: false,
-    excludeMalformed: false,
-    ...extra,
-  };
-}
-
-function parsePlaceholders(text: string): string[] {
-  return text
-    .split(',')
-    .map((s) => s.trim())
-    .map((s) => (s === '(blank)' ? '' : s));
-}
+/** The eight approved analysis questions (V03_FINAL §1) and where each is answered. */
+export const QUESTIONS: { q: string; fn: string; icon: IconName; page: PageId; mode?: AnalysisMode }[] = [
+  { q: 'What sequence does work actually follow?', fn: 'Process map', icon: 'graph', page: 'analysis', mode: 'frequency' },
+  { q: 'Which path is most common?', fn: 'Variants', icon: 'route', page: 'analysis', mode: 'variants' },
+  { q: 'Where does work take longer?', fn: 'Performance map', icon: 'clock', page: 'analysis', mode: 'performance' },
+  { q: 'Which activities are repeated?', fn: 'Rework', icon: 'repeat', page: 'analysis', mode: 'rework' },
+  { q: 'Who hands work over to whom?', fn: 'Hand-over network (WTN)', icon: 'users', page: 'analysis', mode: 'handover' },
+  { q: 'How does the reference process differ from recorded behavior?', fn: 'BPMN comparison', icon: 'compare', page: 'model' },
+  { q: 'How could the process be improved?', fn: 'Redesign strategy → To-be model', icon: 'pen', page: 'design' },
+  { q: 'What would change under a proposed improvement?', fn: 'What-if simulation', icon: 'flask', page: 'refine' },
+];
 
 export function OverviewPage({ navigate }: { navigate: (p: PageId) => void }) {
   const { state, dispatch } = useStore();
+  const { api } = useAnalysis();
   const manifest = useFestivalManifest();
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [xes, setXes] = useState<{ draft: XesDraft; result: EngineResult<XesImportResult> } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [dragging, setDragging] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
 
-  const commit = (d: Draft) => {
-    if (d.parsed.malformed.length && !d.excludeMalformed) return; // consent required, never silent
-    const mapping = Object.fromEntries(Object.entries(d.mapping).filter(([, v]) => v)) as unknown as ColumnMapping;
-    const { rows, rowMap } = engineRows(d.parsed);
-    const base: Omit<DatasetState, 'id'> = {
-      contentFingerprint: fingerprint(d.text),
-      sourceName: d.sourceName,
-      sourceKind: d.sourceKind,
-      headers: d.parsed.headers,
-      rows,
-      rowMap,
-      malformedRows: d.parsed.malformed,
-      fileRowCount: d.parsed.rows.length,
-      rawText: d.text,
-      mapping,
-      missingResources: parsePlaceholders(d.missingResources),
-      fixedOffset: d.fixedOffset.trim() || undefined,
-      acceptExclusions: false,
-      requireProcessType: d.requireProcessType,
-      metadata: d.metadata,
-      festival: d.festival,
-      festivalSettings: d.festival ? settingsFromManifest(d.manifest) : undefined,
-      manifest: d.manifest,
-      loadedAt: Date.now(),
-    };
-    dispatch({ type: 'LOAD_DATASET', dataset: { ...base, id: datasetIdFor(base) } });
-    dispatch({ type: 'TOAST', tone: 'success', message: `Loaded ${d.sourceName}` });
+  const openQuestion = (page: PageId, mode?: AnalysisMode) => {
+    if (mode) dispatch({ type: 'SET_VIEW', view: { analysisMode: mode } });
+    navigate(page);
+  };
+
+  const commit = (d: Draft, then?: { processKey?: string; explore?: boolean }) => {
+    if (draftProblems(d).blocked) return;
+    dispatch({ type: 'LOAD_DATASET', dataset: datasetFromDraft(d) });
+    if (then?.processKey) dispatch({ type: 'SET_VIEW', view: { processKey: then.processKey } });
+    dispatch({ type: 'TOAST', tone: 'success', message: `Loaded ${d.metadata?.name ?? d.sourceName}` });
     setDraft(null);
+    if (then?.explore) {
+      dispatch({ type: 'SET_VIEW', view: { analysisMode: 'frequency' } });
+      navigate('analysis');
+    }
+  };
+
+  const loadOrderSample = () => {
+    const d = draftFromText(ORDER_SAMPLE_CSV, 'order-processing-sample.csv', 'bundled_sample', {
+      mapping: { ...ORDER_SAMPLE_MAPPING },
+      metadata: {
+        name: ORDER_SAMPLE_NAME,
+        sourceType: 'synthetic',
+        timezone: 'UTC',
+        assumptions: ['Hand-authored illustrative orders; not observed company data.'],
+      },
+    });
+    commit(d, { explore: true });
   };
 
   const loadFixture = () => {
-    // Festival adapters are enabled explicitly because the fixture's audience cases use the
-    // Festival audience schema; they can be switched off in the Dataset card.
     const d = draftFromText(UI_FIXTURE_CSV, UI_FIXTURE_DATASET_NAME, 'ui_fixture', {
       festival: true,
       metadata: { name: UI_FIXTURE_DATASET_NAME, sourceType: 'synthetic', timezone: 'UTC', serviceActivity: 'Ticket Verification' },
@@ -167,42 +87,65 @@ export function OverviewPage({ navigate }: { navigate: (p: PageId) => void }) {
     commit(d);
   };
 
-  const loadFestival = async () => {
+  const loadFestival = async (processKey: string) => {
     if (manifest.status !== 'ready') return;
     const m = manifest.manifest;
     setLoadError(null);
+    setBusy(processKey);
     try {
       const res = await fetch(`${import.meta.env.BASE_URL}datasets/${m.csv}`);
       if (!res.ok) throw new Error(`Could not fetch datasets/${m.csv} (${res.status}).`);
       const text = await res.text();
-      setDraft(
-        draftFromText(text, m.name ?? m.csv, 'festival_sample', {
-          requireProcessType: true,
-          festival: true,
-          manifest: m,
-          ...(m.missing_resource_values
-            ? { missingResources: m.missing_resource_values.map((v) => (v === '' ? '(blank)' : v)).join(', ') }
-            : {}),
-          metadata: {
-            name: m.name ?? m.csv,
-            sourceType: m.source_type ?? 'synthetic',
-            timezone: m.timezone,
-            sourceReferences: m.source_references,
-            assumptions: m.assumptions,
-            baselineGateCount: m.baseline_gate_count,
-            serviceActivity: m.service_activity,
-          },
-        }),
-      );
+      const d = draftFromText(text, m.name ?? m.csv, 'festival_sample', {
+        requireProcessType: true,
+        festival: true,
+        manifest: m,
+        ...(m.missing_resource_values ? { missingResources: m.missing_resource_values.map((v) => (v === '' ? '(blank)' : v)).join(', ') } : {}),
+        metadata: {
+          name: m.name ?? m.csv,
+          sourceType: m.source_type ?? 'synthetic',
+          timezone: m.timezone,
+          sourceReferences: m.source_references,
+          assumptions: m.assumptions,
+          baselineGateCount: m.baseline_gate_count,
+          serviceActivity: m.service_activity,
+        },
+      });
+      // One click when the manifest CSV maps automatically; otherwise show the column matcher.
+      if (!draftProblems(d).blocked) commit(d, { processKey, explore: true });
+      else setDraft(d);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
     }
   };
 
   const readFile = (file: File) => {
     setLoadError(null);
+    setDraft(null);
+    setXes(null);
+    if (/\.(xes|xml)$/i.test(file.name)) {
+      if (!hasCapability(api, 'importXes')) {
+        setLoadError(`${file.name}: XES import is handled by the analysis engine, and this build does not include the XES importer yet. Export the same log as CSV and upload it instead.`);
+        return;
+      }
+      if (file.size > XES_LIMITS.bytes) {
+        setLoadError(`${file.name} is ${(file.size / 1048576).toFixed(1)} MiB. XES files are limited to 8 MiB in the browser. Use a smaller subset of the log.`);
+        return;
+      }
+      file.arrayBuffer().then(
+        (buf) => {
+          const bytes = new Uint8Array(buf);
+          const draftX: XesDraft = { sourceName: file.name, bytes, missingResources: '(blank), NONE, NULL, 0;n/a', fixedOffset: '', festival: false, acceptExclusions: false };
+          setXes({ draft: draftX, result: runXesPreview(draftX) });
+        },
+        (e: unknown) => setLoadError(String(e)),
+      );
+      return;
+    }
     if (!/\.(csv|txt)$/i.test(file.name)) {
-      setLoadError(`${file.name} is not a CSV file. XES import is not supported in the browser (P1: convert outside).`);
+      setLoadError(`${file.name} is not a supported file. Upload a CSV (.csv) or an XES event log (.xes or .xml).`);
       return;
     }
     file.text().then(
@@ -215,16 +158,18 @@ export function OverviewPage({ navigate }: { navigate: (p: PageId) => void }) {
     );
   };
 
-  const onDrop = (e: DragEvent) => {
-    e.preventDefault();
-    setDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) readFile(file);
-  };
+  const runXesPreview = (d: XesDraft) =>
+    callEngine(api, 'importXes', d.bytes, {
+      missingResources: parsePlaceholders(d.missingResources),
+      fixedOffset: d.fixedOffset.trim() || undefined,
+      acceptExclusions: d.acceptExclusions,
+      requireProcessType: false,
+      festivalValidation: d.festival,
+    });
 
   const editMapping = () => {
     const d = state.dataset;
-    if (!d) return;
+    if (!d || d.format === 'xes') return;
     setDraft({
       sourceName: d.sourceName,
       sourceKind: d.sourceKind,
@@ -241,625 +186,522 @@ export function OverviewPage({ navigate }: { navigate: (p: PageId) => void }) {
     });
   };
 
-  return (
-    <div>
-      <PageHeader
-        title="Overview & Data"
-        subtitle="Load an event log, map its columns, review validation and pick the process to analyse. Every lifecycle page uses this same dataset and filter scope."
-        actions={
-          <Button onClick={() => downloadText('processpilot-ui-fixture.csv', UI_FIXTURE_CSV, 'text/csv')}>Download UI fixture CSV</Button>
-        }
-      />
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card title="UI fixture" subtitle="20-row test log for UI checks (not a Festival dataset)">
-          <p className="text-sm text-slate-600">
-            Two generic cases plus three audience entries in the Festival audience schema. Small hand-authored test data, not the
-            Festival dataset and not observed data. Analysed by the engine like any other log; see the provider badge in the scope bar.
-          </p>
-          <Button className="mt-3" onClick={loadFixture}>
-            Load UI fixture
-          </Button>
-        </Card>
-        <Card title="Festival sample" subtitle="Synthetic Demo Festival Operations log">
-          {manifest.status === 'loading' && <p className="text-sm text-slate-500">Checking for the published sample…</p>}
-          {manifest.status === 'missing' && (
-            <>
-              <p className="text-sm text-slate-600">Not available yet. The business/data track publishes it to <code className="font-mono text-xs">public/datasets/</code>.</p>
-              <p className="mt-1 text-xs text-slate-400">{manifest.message}</p>
-              <Button className="mt-3" disabled>
-                Load Festival sample
-              </Button>
-            </>
-          )}
-          {manifest.status === 'ready' && (
-            <>
-              <KeyValue
-                items={[
-                  ['Name', manifest.manifest.name ?? '—'],
-                  ['Generator', `${manifest.manifest.generator?.version ?? '—'} · seed ${manifest.manifest.generator?.seed ?? '—'}`],
-                ]}
-              />
-              {manifest.warnings.length > 0 && (
-                <div className="mt-2">
-                  <Notice tone="warning" title="Manifest fields ignored">{manifest.warnings.join(' ')}</Notice>
-                </div>
-              )}
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button variant="primary" onClick={loadFestival}>
-                  Load Festival sample
-                </Button>
-                <a className="inline-flex h-9 items-center px-2 text-sm font-medium text-brand-600 hover:underline" href={`${import.meta.env.BASE_URL}datasets/${manifest.manifest.csv}`} download>
-                  Download CSV
-                </a>
-              </div>
-              {[...Object.entries(manifest.manifest.bpmn ?? {}).map(([k, f]) => [`${k} As-is`, f] as const), ...Object.entries(manifest.manifest.bpmn_to_be ?? {}).map(([k, f]) => [`${k} To-be`, f] as const)].length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
-                  <span className="text-slate-400">BPMN:</span>
-                  {[...Object.entries(manifest.manifest.bpmn ?? {}).map(([k, f]) => [`${k} As-is`, f] as const), ...Object.entries(manifest.manifest.bpmn_to_be ?? {}).map(([k, f]) => [`${k} To-be`, f] as const)].map(([label, f]) => (
-                    <a key={label} className="font-medium text-brand-600 hover:underline" href={`${import.meta.env.BASE_URL}bpmn/${f}`} download>
-                      {label}
-                    </a>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </Card>
-        <Card title="Upload CSV" subtitle="Minimum columns: case_id, activity, timestamp">
-          <label
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={onDrop}
-            className={cx(
-              'flex cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed px-4 py-5 text-center text-sm transition',
-              dragging ? 'border-brand-500 bg-brand-50' : 'border-slate-300 hover:border-slate-400',
-            )}
-          >
-            <span className="font-medium text-slate-700">Drop a CSV here or click to browse</span>
-            <span className="mt-1 text-xs text-slate-400">Processed locally. Not uploaded anywhere.</span>
-            <input type="file" accept=".csv,text/csv" className="sr-only" onChange={(e) => e.target.files?.[0] && readFile(e.target.files[0])} />
-          </label>
-        </Card>
-      </div>
-
-      {loadError && (
-        <div className="mt-4">
-          <Notice tone="error" title="Could not load the file">
-            {loadError}
-          </Notice>
-        </div>
-      )}
-
-      {draft && <MappingEditor draft={draft} onChange={setDraft} onCancel={() => setDraft(null)} onCommit={commit} />}
-
-      {!draft && state.dataset && <LoadedDataset navigate={navigate} onEditMapping={editMapping} />}
-
-      {!draft && !state.dataset && (
-        <div className="mt-6">
-          <EmptyState title="No dataset loaded" icon="▦">
-            Choose a source above. Browser refresh clears the dataset, but saved targets, designs and plans are restored when the same file and mapping are loaded again.
-          </EmptyState>
-        </div>
-      )}
-    </div>
+  const errorBox = loadError && (
+    <Notice tone="error" title="This file could not be loaded" className="mb-4">
+      {loadError}
+    </Notice>
   );
-}
 
-function MappingEditor({
-  draft,
-  onChange,
-  onCancel,
-  onCommit,
-}: {
-  draft: Draft;
-  onChange: (d: Draft) => void;
-  onCancel: () => void;
-  onCommit: (d: Draft) => void;
-}) {
-  const used = Object.entries(draft.mapping).filter(([, v]) => v);
-  const missingRequired = REQUIRED.filter((f) => !draft.mapping[f]);
-  const dupHeaders = used.map(([, v]) => v).filter((v, i, a) => a.indexOf(v) !== i);
-  const offsetInvalid = !!draft.fixedOffset && !/^(Z|[+-](0\d|1[0-4]):[0-5]\d)$/.test(draft.fixedOffset.trim());
-  const processTypeMissing = draft.requireProcessType && !draft.mapping.process_type;
-  const malformed = draft.parsed.malformed;
-  const consentMissing = malformed.length > 0 && !draft.excludeMalformed;
-  const blocked = missingRequired.length > 0 || dupHeaders.length > 0 || offsetInvalid || processTypeMissing || consentMissing;
-  const setMap = (field: string, header: string) => onChange({ ...draft, mapping: { ...draft.mapping, [field]: header } });
-  const unmapped = draft.parsed.headers.filter((h) => !used.some(([, v]) => v === h));
-  const malformedSet = new Set(malformed.map((m) => m.sourceRow));
-  const fieldRow = (field: string) => {
-    const required = (REQUIRED as readonly string[]).includes(field) || (field === 'process_type' && draft.requireProcessType);
+  if (draft) {
     return (
-      <div key={field} className="grid grid-cols-[150px_1fr] items-center gap-2">
-        <span className="font-mono text-xs text-slate-600">
-          {field}
-          {required && <span className="text-red-500"> *</span>}
-        </span>
-        <Select value={draft.mapping[field] ?? ''} onChange={(e) => setMap(field, e.target.value)} className="!py-1 text-xs">
-          <option value="">— not mapped —</option>
-          {draft.parsed.headers.map((h) => (
-            <option key={h} value={h}>
-              {h}
-            </option>
-          ))}
-        </Select>
+      <div>
+        <PageHeader phase="Overview & Data" title="Match your columns" subtitle="Tell ProcessPilot which column is the case, the activity and the time. Optional columns unlock more analyses (lifecycle → service time, resource → hand-overs)." />
+        {errorBox}
+        <MappingEditor draft={draft} onChange={setDraft} onCancel={() => setDraft(null)} onCommit={(d) => commit(d)} />
       </div>
     );
-  };
+  }
 
+  if (xes) {
+    return (
+      <div>
+        <PageHeader phase="Overview & Data" title="Check your XES log" subtitle="ProcessPilot reads trace-based XES (concept:name, time:timestamp, org:resource, lifecycle:transition) locally in your browser." />
+        {errorBox}
+        <XesPreview
+          draft={xes.draft}
+          result={xes.result}
+          onChange={(d) => setXes({ draft: d, result: runXesPreview(d) })}
+          onCancel={() => setXes(null)}
+          onCommit={(rawCount) => {
+            dispatch({ type: 'LOAD_DATASET', dataset: datasetFromXes(xes.draft, rawCount) });
+            dispatch({ type: 'TOAST', tone: 'success', message: `Loaded ${xes.draft.sourceName}` });
+            setXes(null);
+            dispatch({ type: 'SET_VIEW', view: { analysisMode: 'frequency' } });
+            navigate('analysis');
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (!state.dataset) {
+    return (
+      <Landing
+        manifest={manifest}
+        busy={busy}
+        error={errorBox}
+        onOrder={loadOrderSample}
+        onFestival={loadFestival}
+        onFile={readFile}
+        onFixture={loadFixture}
+        onQuestion={openQuestion}
+      />
+    );
+  }
+
+  return <LoadedDataset navigate={navigate} onEditMapping={editMapping} onFile={readFile} error={errorBox} onQuestion={openQuestion} />;
+}
+
+/* ------------------------------ Landing ------------------------------ */
+
+function Landing({
+  manifest,
+  busy,
+  error,
+  onOrder,
+  onFestival,
+  onFile,
+  onFixture,
+  onQuestion,
+}: {
+  manifest: ReturnType<typeof useFestivalManifest>;
+  busy: string | null;
+  error: ReactNode;
+  onOrder: () => void;
+  onFestival: (processKey: string) => void;
+  onFile: (f: File) => void;
+  onFixture: () => void;
+  onQuestion: (page: PageId, mode?: AnalysisMode) => void;
+}) {
   return (
-    <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,420px)_1fr]">
-      <Card
-        title="Column mapping"
-        subtitle={`${draft.sourceName} · ${plural(draft.parsed.rows.length, 'data row')} · ${plural(draft.parsed.headers.length, 'column')}`}
-        actions={<Badge tone={draft.sourceKind === 'festival_sample' ? 'violet' : 'blue'}>{draft.sourceKind === 'festival_sample' ? 'Festival sample' : 'User upload'}</Badge>}
-      >
-        <div className="space-y-2.5">{[...REQUIRED, ...OPTIONAL].map(fieldRow)}</div>
-        <details className="mt-3 rounded-md border border-slate-200 px-3 py-2" open={draft.festival}>
-          <summary className="cursor-pointer text-xs font-semibold text-slate-600">Festival case-study fields (optional)</summary>
-          <div className="mt-2.5 space-y-2.5">{FESTIVAL_FIELDS.map(fieldRow)}</div>
-        </details>
-        <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
-          <Field label="Missing-resource placeholders" hint="Comma-separated. (blank) = empty value. Values listed here are treated as missing resource.">
-            <Input value={draft.missingResources} onChange={(e) => onChange({ ...draft, missingResources: e.target.value })} />
-          </Field>
-          <Field
-            label="Fixed UTC offset for timezone-less timestamps"
-            hint="Optional, e.g. +09:00. Leave empty to require explicit offsets in every timestamp."
-            error={offsetInvalid ? 'Use Z or ±HH:MM.' : null}
-          >
-            <Input value={draft.fixedOffset} placeholder="(none)" invalid={offsetInvalid} onChange={(e) => onChange({ ...draft, fixedOffset: e.target.value })} />
-          </Field>
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" checked={draft.requireProcessType} onChange={(e) => onChange({ ...draft, requireProcessType: e.target.checked })} />
-            Require process_type on every row (multi-process import)
-          </label>
-          <label className="flex items-start gap-2 text-sm text-slate-700">
-            <input type="checkbox" className="mt-1" checked={draft.festival} onChange={(e) => onChange({ ...draft, festival: e.target.checked })} />
-            <span>
-              Enable Festival case-study adapters
-              <span className="block text-xs text-slate-400">Adds Festival KPIs, rework rules, Festival process names and the audience gate simulation. Leave off for general logs.</span>
-              {draft.festival && !(draft.requireProcessType && draft.mapping.festival_id) && (
-                <span className="block text-xs text-amber-700">
-                  Audience time-order warnings at import (e.g. a step recorded before Join Entry Queue) also need “Require process_type” and a mapped festival_id. Festival KPIs still exclude out-of-order evidence.
-                </span>
-              )}
-            </span>
-          </label>
-        </div>
-        {malformed.length > 0 && (
-          <div className="mt-3">
-            <Notice tone="error" title={`${plural(malformed.length, 'row')} with the wrong number of columns`}>
-              <p className="text-xs">These rows cannot be split into one value per header, so they cannot be validated. Fix them in the source file, or exclude them explicitly. They stay listed in the import report and evidence export.</p>
-              <div className="mt-2 max-h-40 overflow-auto rounded border border-red-200 bg-white">
-                <table className="w-full text-xs">
-                  <thead><tr className="text-left text-red-900"><th className="px-2 py-1">Row</th><th className="px-2 py-1">Reason</th></tr></thead>
-                  <tbody>
-                    {malformed.slice(0, 200).map((m) => (
-                      <tr key={m.sourceRow} className="border-t border-red-100"><td className="px-2 py-1 font-mono">{m.sourceRow}</td><td className="px-2 py-1">{m.code}: {m.message}</td></tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <label className="mt-2 flex items-start gap-2 font-medium">
-                <input type="checkbox" className="mt-1" checked={draft.excludeMalformed} onChange={(e) => onChange({ ...draft, excludeMalformed: e.target.checked })} />
-                Exclude these {plural(malformed.length, 'row')} and validate the remaining {plural(draft.parsed.rows.length - malformed.length, 'row')}.
+    <div className="space-y-8">
+      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white px-6 py-8 md:px-10 md:py-10">
+        <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-brand-50" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-32 right-40 h-64 w-64 rounded-full bg-violet-50/70" />
+        <div className="relative grid items-center gap-8 lg:grid-cols-[1.15fr_1fr]">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <ProcessPilotMark size={36} />
+              <span className="text-sm font-semibold text-slate-700">ProcessPilot</span>
+              <Badge tone="brand">Visual Process Intelligence &amp; Optimization</Badge>
+            </div>
+            <h1 className="mt-4 text-[32px] font-semibold leading-[1.15] tracking-tight text-slate-900 md:text-[38px]">
+              Discover how work flows.
+              <br />
+              <span className="text-brand-600">Design how it should flow.</span>
+            </h1>
+            <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-slate-600">
+              Turn an event log into a process map, see where cases slow down, repeat or change hands, then design and test an improvement — with every number linked to the cases behind it.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <Button variant="primary" size="lg" iconRight="arrowRight" onClick={onOrder}>
+                Explore a sample process
+              </Button>
+              <label className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-[15px] font-medium text-slate-700 shadow-sm hover:bg-slate-50 focus-within:ring-2 focus-within:ring-brand-500">
+                <Icon name="upload" className="h-4 w-4" />
+                Upload your log
+                <input type="file" accept=".csv,.txt,.xes,.xml,text/csv" className="sr-only" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
               </label>
-            </Notice>
+            </div>
+            <p className="mt-3 text-xs text-slate-500">CSV or XES · processed locally in your browser · nothing is uploaded</p>
           </div>
-        )}
-        {draft.parsed.renamedHeaders && (
-          <div className="mt-3"><Notice tone="warning">Duplicate column headers were renamed by the parser (e.g. <code>name_1</code>). Check the mapping.</Notice></div>
-        )}
-        {missingRequired.length > 0 && <div className="mt-3"><Notice tone="error">Map the required fields: {missingRequired.join(', ')}.</Notice></div>}
-        {dupHeaders.length > 0 && <div className="mt-3"><Notice tone="error">A CSV column is mapped twice: {[...new Set(dupHeaders)].join(', ')}.</Notice></div>}
-        {processTypeMissing && <div className="mt-3"><Notice tone="error">process_type must be mapped when it is required.</Notice></div>}
-        {draft.parsed.parseErrors.length > 0 && (
-          <div className="mt-3">
-            <Notice tone="warning" title="CSV parser warnings">
-              <ul className="list-disc pl-4 text-xs">
-                {draft.parsed.parseErrors.map((e) => <li key={e}>{e}</li>)}
-              </ul>
-            </Notice>
-          </div>
-        )}
-        <div className="mt-4 flex justify-end gap-2">
-          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
-          <Button variant="primary" disabled={blocked} onClick={() => onCommit(draft)}>Validate & load</Button>
+          <HeroDiagram />
         </div>
-      </Card>
-      <Card title="Raw preview" subtitle={`First ${Math.min(12, draft.parsed.rows.length)} rows as parsed (strings, no coercion)`}>
-        {unmapped.length > 0 && (
-          <p className="mb-2 text-xs text-slate-500">
-            Unmapped columns are kept as attributes under their original headers: {unmapped.join(', ')}
-          </p>
-        )}
-        <RawTable headers={draft.parsed.headers} rows={draft.parsed.rows.slice(0, 12)} mapping={draft.mapping} flagged={malformedSet} />
-      </Card>
+      </section>
+
+      {error}
+
+      <section>
+        <div className="mb-3 flex items-end justify-between">
+          <h2 className="text-[15px] font-semibold text-slate-900">Choose your data</h2>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Card className="flex flex-col" bodyClassName="flex flex-1 flex-col">
+            <div className="flex items-center gap-2">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-50 text-brand-600"><Icon name="file" /></span>
+              <div>
+                <div className="text-[14px] font-semibold text-slate-900">Order Processing</div>
+                <div className="text-xs text-slate-500">General sample · 3 orders · 11 events</div>
+              </div>
+            </div>
+            <p className="mt-3 flex-1 text-[13px] leading-relaxed text-slate-600">{ORDER_SAMPLE_DESCRIPTION}</p>
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <Badge tone="violet">Synthetic</Badge>
+              <Button variant="primary" iconRight="arrowRight" onClick={onOrder}>Explore</Button>
+            </div>
+          </Card>
+
+          <Card className="flex flex-col" bodyClassName="flex flex-1 flex-col">
+            <div className="flex items-center gap-2">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-violet-50 text-violet-600"><Icon name="music" /></span>
+              <div>
+                <div className="text-[14px] font-semibold text-slate-900">Music Festival Operations</div>
+                <div className="text-xs text-slate-500">Case study · three linked processes</div>
+              </div>
+            </div>
+            {manifest.status === 'ready' ? (
+              <div className="mt-3 flex-1 space-y-1.5">
+                {Object.entries(FESTIVAL_PROCESS_INFO).map(([key, info]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    disabled={!!busy}
+                    onClick={() => onFestival(key)}
+                    className="group flex w-full items-start justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 text-left hover:border-brand-300 hover:bg-brand-50/40 disabled:opacity-60"
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-[13px] font-semibold text-slate-800">{processLabel(key, true)}</span>
+                      <span className="block text-xs text-slate-500">{info.caseMeaning}</span>
+                    </span>
+                    <span className="mt-0.5 text-xs font-medium text-brand-600 group-hover:underline">{busy === key ? 'Loading…' : 'Explore →'}</span>
+                  </button>
+                ))}
+                <div className="pt-1 text-[11px] text-slate-500">
+                  {manifest.manifest.name ?? manifest.manifest.csv} · synthetic · generator {manifest.manifest.generator?.version ?? '—'} · seed {manifest.manifest.generator?.seed ?? '—'}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-3 flex-1 text-[13px] leading-relaxed text-slate-600">
+                <p>Stage &amp; technical operations, audience entry and equipment readiness for a fictional festival, generated with a documented seed.</p>
+                <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                  {manifest.status === 'loading' ? 'Checking for the published Festival sample…' : 'The Festival dataset is not published in this build yet. It appears here automatically once the data files are added.'}
+                </p>
+              </div>
+            )}
+          </Card>
+
+          <UploadCard onFile={onFile} />
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-[15px] font-semibold text-slate-900">Questions you can answer</h2>
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {QUESTIONS.map((x, i) => (
+            <button
+              key={x.q}
+              type="button"
+              onClick={() => onQuestion(x.page, x.mode)}
+              className="group flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-left transition hover:border-brand-300 hover:shadow-sm"
+            >
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-50 text-slate-500 group-hover:bg-brand-50 group-hover:text-brand-600">
+                <Icon name={x.icon} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[13px] font-medium leading-snug text-slate-800">{x.q}</span>
+                <span className="mt-0.5 block text-[11.5px] text-slate-500">
+                  <span className="tabular text-slate-400">{i + 1}.</span> {x.fn}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-slate-500">Load data first; each question opens the matching view.</p>
+      </section>
+
+      <details className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-[13px] text-slate-600">
+        <summary className="cursor-pointer font-medium text-slate-700">For developers: interface test log</summary>
+        <p className="mt-2">A 20-row hand-authored log used to test the interface (generic cases plus three Festival-schema entries). Not a demonstration dataset.</p>
+        <div className="mt-2 flex gap-2">
+          <Button size="sm" onClick={onFixture}>Load test log</Button>
+          <Button size="sm" variant="ghost" icon="download" onClick={() => downloadText('processpilot-ui-fixture.csv', UI_FIXTURE_CSV, 'text/csv')}>Download CSV</Button>
+        </div>
+      </details>
     </div>
   );
 }
 
-function RawTable({
-  headers,
-  rows,
-  mapping,
-  rowNumbers,
-  flagged,
-}: {
-  headers: string[];
-  rows: Record<string, unknown>[];
-  mapping: Record<string, string | undefined>;
-  /** Original file row numbers for each displayed row (defaults to the index). */
-  rowNumbers?: number[];
-  flagged?: Set<number>;
-}) {
-  const reverse = new Map(Object.entries(mapping).filter(([, v]) => v).map(([k, v]) => [v!, k]));
+function UploadCard({ onFile, compact }: { onFile: (f: File) => void; compact?: boolean }) {
+  const [dragging, setDragging] = useState(false);
+  const onDrop = (e: DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) onFile(file);
+  };
   return (
-    <Table className="max-h-[420px]">
-      <thead>
-        <tr>
-          <Th>Row</Th>
-          {headers.map((h) => (
-            <Th key={h}>
-              {h}
-              {reverse.get(h) && reverse.get(h) !== h && <div className="font-mono text-[10px] normal-case text-brand-600">→ {reverse.get(h)}</div>}
-            </Th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((r, i) => {
-          const n = rowNumbers?.[i] ?? i;
-          const bad = flagged?.has(n);
-          return (
-            <tr key={i} className={cx(bad && 'bg-red-50')}>
-              <Td className={cx('font-mono text-xs', bad ? 'font-semibold text-red-700' : 'text-slate-400')}>{n}{bad && ' ⚠'}</Td>
-              {headers.map((h) => (
-                <Td key={h} className="whitespace-nowrap font-mono text-xs">
-                  {r[h] === '' ? <span className="text-slate-300">∅</span> : r[h] === undefined ? <span className="text-red-400">missing</span> : String(r[h])}
-                </Td>
-              ))}
-            </tr>
-          );
-        })}
-      </tbody>
-    </Table>
+    <Card className="flex flex-col" bodyClassName="flex flex-1 flex-col">
+      {!compact && (
+        <div className="mb-3 flex items-center gap-2">
+          <span className="grid h-8 w-8 place-items-center rounded-lg bg-sky-50 text-sky-600"><Icon name="upload" /></span>
+          <div>
+            <div className="text-[14px] font-semibold text-slate-900">Your own event log</div>
+            <div className="text-xs text-slate-500">CSV with column matching, or XES (.xes / .xml)</div>
+          </div>
+        </div>
+      )}
+      <label
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+        className={cx(
+          'flex flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-5 text-center text-[13px] transition focus-within:ring-2 focus-within:ring-brand-500',
+          dragging ? 'border-brand-500 bg-brand-50' : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50/60',
+        )}
+      >
+        <span className="font-medium text-slate-700">Drop a file here or click to browse</span>
+        <span className="mt-1 text-xs text-slate-500">Needs a case ID, an activity and a timestamp per row</span>
+        <input type="file" accept=".csv,.txt,.xes,.xml,text/csv" className="sr-only" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
+      </label>
+      <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
+        XES limits: 8 MiB, {XES_LIMITS.events.toLocaleString('en-US')} events, {XES_LIMITS.traces.toLocaleString('en-US')} traces. Processed locally; nothing leaves your browser.
+      </p>
+    </Card>
   );
 }
 
-function LoadedDataset({ navigate, onEditMapping }: { navigate: (p: PageId) => void; onEditMapping: () => void }) {
+/** Decorative mini process map for the hero (static illustration, not data). */
+function HeroDiagram() {
+  const nodes = [
+    { x: 20, y: 70, w: 92, label: 'Received' },
+    { x: 150, y: 20, w: 92, label: 'Payment' },
+    { x: 150, y: 120, w: 92, label: 'Cancelled' },
+    { x: 280, y: 20, w: 92, label: 'Packed' },
+    { x: 280, y: 120, w: 92, label: 'Shipped' },
+  ];
+  return (
+    <div className="hidden rounded-xl border border-slate-200 bg-slate-50/80 p-4 lg:block" aria-hidden>
+      <svg viewBox="0 0 392 170" className="h-auto w-full">
+        <defs>
+          <marker id="pp-hero-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 10 5 0 10z" fill="#6366f1" />
+          </marker>
+        </defs>
+        {[
+          ['M112 82 C130 70 132 40 150 36', 4],
+          ['M112 90 C130 100 132 130 150 136', 1.6],
+          ['M242 36 L280 36', 4],
+          ['M326 52 L326 120', 3],
+        ].map(([d, w], i) => (
+          <path key={i} d={d as string} fill="none" stroke={i === 1 ? '#f59e0b' : '#6366f1'} strokeWidth={w as number} markerEnd="url(#pp-hero-arrow)" opacity={0.85} />
+        ))}
+        {nodes.map((n) => (
+          <g key={n.label}>
+            <rect x={n.x} y={n.y} width={n.w} height={32} rx={7} fill="#fff" stroke="#cbd5e1" />
+            <rect x={n.x} y={n.y} width={4} height={32} rx={2} fill="#6366f1" />
+            <text x={n.x + 14} y={n.y + 20} fontSize={12} fontWeight={600} fill="#1e293b">{n.label}</text>
+          </g>
+        ))}
+      </svg>
+      <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+        <span>Illustration — your map is drawn from the log</span>
+        <span className="inline-flex items-center gap-1"><span className="inline-block h-0.5 w-4 bg-amber-500" /> exception path</span>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------ Loaded dataset ------------------------------ */
+
+function LoadedDataset({
+  navigate,
+  onEditMapping,
+  onFile,
+  error,
+  onQuestion,
+}: {
+  navigate: (p: PageId) => void;
+  onEditMapping: () => void;
+  onFile: (f: File) => void;
+  error: ReactNode;
+  onQuestion: (page: PageId, mode?: AnalysisMode) => void;
+}) {
   const { state, dispatch } = useStore();
   const analysis = useAnalysis();
   const dataset = state.dataset!;
-  const { validation, traces } = analysis;
+  const { traces, validation } = analysis;
+  const ready = traces?.status === 'ok';
+  const [changing, setChanging] = useState(false);
 
   return (
-    <div className="mt-6 space-y-4">
-      {analysis.provider === 'ui_fixture' && (
-        <Notice tone="fixture" title="Results provider: UI fixture (hand-authored values)">
-          Analysis results for this dataset come from hand-calculated values in <code className="font-mono text-xs">src/adapters/fixtures/uiFixture.ts</code>, not from the engine.
-          Subsets of cases, other mappings or import options show a "no fixture value" state because no values were authored for them.
-        </Notice>
-      )}
-      <Card
-        title="Dataset"
+    <div className="space-y-5">
+      <PageHeader
+        phase="Overview & Data"
+        title={dataset.metadata?.name ?? dataset.sourceName}
+        subtitle={
+          dataset.sourceKind === 'bundled_sample'
+            ? ORDER_SAMPLE_DESCRIPTION
+            : dataset.sourceKind === 'festival_sample'
+              ? 'Synthetic Festival operations log with three separate processes. Each process is analysed on its own; the Festival overview compares them side by side.'
+              : 'Your event log, checked and ready for analysis. Choose the process to analyse, then open the process map.'
+        }
         actions={
           <>
-            <Button size="sm" onClick={() => dispatch({ type: 'SET_FESTIVAL', enabled: !dataset.festival })}>
-              {dataset.festival ? 'Disable Festival adapters' : 'Enable Festival adapters'}
+            <Button variant="ghost" onClick={() => setChanging((v) => !v)}>Use different data</Button>
+            <Button variant="primary" iconRight="arrowRight" disabled={!ready} onClick={() => onQuestion('analysis', 'frequency')}>
+              Open the process map
             </Button>
-            <Button size="sm" onClick={onEditMapping}>Edit mapping</Button>
-            <Button size="sm" variant="ghost" onClick={() => dispatch({ type: 'CLEAR_DATASET' })}>Unload</Button>
           </>
         }
-      >
-        <div className="grid gap-6 md:grid-cols-2">
-          <KeyValue
-            items={[
-              ['Source', <span className="inline-flex items-center gap-2">{dataset.sourceName} <SourceBadge /></span>],
-              ['Results provider', <ProviderBadge />],
-              ['Dataset ID', <code className="font-mono text-xs">{dataset.id}</code>],
-              ['File rows', `${plural(dataset.fileRowCount, 'data row')}${dataset.malformedRows.length ? ` · ${dataset.malformedRows.length} malformed excluded with consent · ${dataset.rows.length} sent to validation` : ''}`],
-              ['Mapping', <span className="font-mono text-xs">{Object.entries(dataset.mapping).filter(([, v]) => v).map(([k, v]) => (k === v ? k : `${k}←${v}`)).join(', ')}</span>],
-            ]}
-          />
-          <KeyValue
-            items={[
-              ['Missing resources', <span className="font-mono text-xs">{dataset.missingResources.map((v) => (v === '' ? '(blank)' : v)).join(', ')}</span>],
-              ['Fixed offset', dataset.fixedOffset ?? 'none (explicit offsets required)'],
-              ['Festival adapters', dataset.festival ? (dataset.manifest ? 'enabled (Festival manifest)' : 'enabled (explicit)') : 'off (general process log)'],
-              ['Assumptions', dataset.metadata?.assumptions?.length ? `${dataset.metadata.assumptions.length} listed in manifest` : '—'],
-            ]}
-          />
+      />
+      {error}
+      {changing && (
+        <div className="grid gap-4 md:grid-cols-[1fr_1fr]">
+          <UploadCard onFile={onFile} />
+          <Card title="Or start over" subtitle="Saved designs, targets and plans stay in this browser and come back when the same file and settings are loaded again.">
+            <div className="flex flex-wrap gap-2">
+              {dataset.format !== 'xes' && <Button onClick={onEditMapping}>Change column matching</Button>}
+              <Button variant="danger" onClick={() => dispatch({ type: 'CLEAR_DATASET' })}>Unload this log</Button>
+            </div>
+          </Card>
         </div>
-      </Card>
-
-      <ValidationCard />
-
-      {traces?.status === 'ok' && (
-        <>
-          <ProcessSummary navigate={navigate} />
-          <TraceTable />
-        </>
       )}
 
-      <EngineStatusCard />
+      {ready ? <Summary /> : null}
 
-      {dataset.malformedRows.length > 0 && (
-        <Card title="Excluded malformed rows" subtitle="Excluded before validation with explicit consent (wrong number of columns). Row numbers refer to the original file.">
-          <Table className="max-h-60">
-            <thead><tr><Th>File row</Th><Th>Code</Th><Th>Reason</Th></tr></thead>
-            <tbody>
-              {dataset.malformedRows.map((m) => (
-                <tr key={m.sourceRow}><Td className="font-mono text-xs">{m.sourceRow}</Td><Td className="font-mono text-xs">{m.code}</Td><Td>{m.message}</Td></tr>
-              ))}
-            </tbody>
-          </Table>
-        </Card>
+      <div className="grid gap-5 xl:grid-cols-[1.3fr_1fr]">
+        <div className="space-y-5">
+          {ready && analysis.processKeys.length > 1 && <ProcessChooser onExplore={() => onQuestion('analysis', 'frequency')} />}
+          <Card title="Data check" subtitle={dataset.format === 'xes' ? 'Checked by the engine’s XES importer' : 'Every row is checked; nothing is dropped silently'}>
+            {validation ? <DataCheck /> : <p className="text-sm text-slate-500">Checking…</p>}
+          </Card>
+        </div>
+        <Provenance />
+      </div>
+
+      {ready && (
+        <section>
+          <h2 className="mb-2 text-[15px] font-semibold text-slate-900">What do you want to find out?</h2>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            {QUESTIONS.map((x) => (
+              <button
+                key={x.q}
+                type="button"
+                onClick={() => onQuestion(x.page, x.mode)}
+                className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left transition hover:border-brand-300 hover:shadow-sm"
+              >
+                <Icon name={x.icon} className="h-4 w-4 shrink-0 text-slate-400 group-hover:text-brand-600" />
+                <span className="min-w-0 flex-1 text-[13px] font-medium leading-snug text-slate-800">{x.q}</span>
+                <Icon name="chevronRight" className="h-4 w-4 shrink-0 text-slate-300 group-hover:text-brand-500" />
+              </button>
+            ))}
+          </div>
+        </section>
       )}
 
-      <Card title="Raw rows" subtitle="Rows sent to validation, in source order. Row numbers are zero-based data rows of the original file (also used in validation issues).">
-        <RawTable headers={dataset.headers} rows={dataset.rows.slice(0, 50)} mapping={dataset.mapping} rowNumbers={dataset.rowMap} />
-        {dataset.rows.length > 50 && <p className="mt-2 text-xs text-slate-400">Showing 50 of {dataset.rows.length} rows.</p>}
-      </Card>
+      {ready && <TraceTable />}
+      <AdvancedDataDetails />
+      <div className="flex justify-end">
+        <Button variant="ghost" size="sm" onClick={() => navigate('export')} icon="download">Evidence export</Button>
+      </div>
     </div>
   );
 }
 
-function ValidationCard() {
-  const { state, dispatch } = useStore();
-  const { validation } = useAnalysis();
-  const [severity, setSeverity] = useState<'all' | 'error' | 'warning'>('all');
-  if (!validation) return null;
+function Summary() {
+  const { validation, selectedTraces, dfg, variants, kpis } = useAnalysis();
+  const { state } = useStore();
+  const v = validation?.status === 'ok' ? validation.data : null;
+  const steps = useMemo(() => selectedTraces.reduce((s, t) => s + t.sequence.length, 0), [selectedTraces]);
+  const top = variants?.status === 'ok' ? [...variants.data].sort((a, b) => b.count - a.count)[0] : undefined;
+  const elapsed = kpis?.status === 'ok' ? kpis.data.find((m) => m.id === 'case_elapsed_mean') : undefined;
+  const process = processLabel(state.view.processKey ?? '', state.dataset?.festival);
   return (
-    <Card title="Validation" subtitle="Produced by validateAndNormalize. Invalid rows are never discarded silently.">
-      <EngineGate result={validation}>
-        {(v) => {
-          const errors = v.issues.filter((i) => i.severity === 'error');
-          const warnings = v.issues.filter((i) => i.severity === 'warning');
-          const errorRows = new Set(errors.filter((i) => i.row >= 0).map((i) => i.row)).size;
-          const importWide = errors.filter((i) => i.row < 0).length;
-          const shown = v.issues.filter((i) => severity === 'all' || i.severity === severity);
-          return (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-                <Stat label="Raw rows" value={v.rawCount.toLocaleString('en-US')} />
-                <Stat label="Accepted events" value={v.events.length.toLocaleString('en-US')} />
-                <Stat label="Excluded rows" value={v.excludedCount.toLocaleString('en-US')} tone={v.excludedCount ? 'bad' : 'default'} />
-                <Stat label="Errors" value={errors.length} sub={`${plural(errorRows, 'row')} affected`} tone={errors.length ? 'bad' : 'default'} />
-                <Stat label="Warnings" value={warnings.length} />
-              </div>
-              {v.canAnalyze ? (
-                <Notice tone="success">
-                  Ready for analysis.
-                  {state.dataset?.acceptExclusions && v.excludedCount > 0 && ` ${plural(v.excludedCount, 'row')} excluded with your consent.`}
-                </Notice>
-              ) : (
-                <Notice tone="error" title="Analysis blocked">
-                  {v.events.length === 0 && errors.length === 0
-                    ? 'No usable rows remain in this dataset.'
-                    : 'Rows with fatal issues must be fixed in the source file, or explicitly excluded before analysing the valid subset.'}
-                  {importWide > 0 && (
-                    <div className="mt-1 text-xs">{plural(importWide, 'import-wide error')} (e.g. mapping or required column) cannot be excluded row by row; fix the mapping or source file.</div>
-                  )}
-                  {errorRows > 0 && !state.dataset?.acceptExclusions && (
-                    <label className="mt-2 flex items-start gap-2 font-medium">
-                      <input type="checkbox" className="mt-1" onChange={(e) => dispatch({ type: 'SET_ACCEPT_EXCLUSIONS', accept: e.target.checked })} />
-                      I confirm excluding the {plural(errorRows, 'row')} with fatal issues and analysing the remaining valid rows.
-                    </label>
-                  )}
-                </Notice>
-              )}
-              {state.dataset?.acceptExclusions && (
-                <Button size="sm" variant="ghost" onClick={() => dispatch({ type: 'SET_ACCEPT_EXCLUSIONS', accept: false })}>
-                  Withdraw exclusion consent
-                </Button>
-              )}
-              {v.issues.length > 0 && (
-                <div>
-                  <div className="mb-2 flex items-center gap-2">
-                    <span className="text-xs font-medium text-slate-500">Show</span>
-                    {(['all', 'error', 'warning'] as const).map((s) => (
-                      <Button key={s} size="sm" variant={severity === s ? 'primary' : 'secondary'} onClick={() => setSeverity(s)}>
-                        {s}
-                      </Button>
-                    ))}
-                  </div>
-                  <IssueTable issues={shown} rowMap={state.dataset?.rowMap ?? []} />
-                </div>
-              )}
-            </div>
-          );
-        }}
-      </EngineGate>
-    </Card>
+    <div>
+      <div className="mb-2 text-xs text-slate-500">
+        Selected process: <b className="font-semibold text-slate-700">{process}</b> · all numbers below are for the current case scope
+      </div>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <SummaryTile label="Cases" value={selectedTraces.length.toLocaleString('en-US')} />
+        <SummaryTile label="Rows in file" value={v ? v.rawCount.toLocaleString('en-US') : '—'} sub={v && v.excludedCount ? `${v.excludedCount} excluded` : 'all processes'} />
+        <SummaryTile label="Recorded steps" value={steps.toLocaleString('en-US')} sub="complete/point events" />
+        <SummaryTile label="Activities" value={<EngineGate result={dfg} compact>{(d) => d.nodes.length}</EngineGate>} />
+        <SummaryTile
+          label={elapsed ? kpiName(elapsed.id) : 'Average case duration'}
+          value={elapsed ? fmtMinutes(elapsed.value) : '—'}
+          sub="first → last recorded event, not confirmed completion"
+        />
+        <SummaryTile label="Most common path" value={top ? fmtShare(top.share) : '—'} sub={top ? `${plural(top.count, 'case')} · ${top.activities.length} steps` : undefined} />
+      </div>
+    </div>
   );
 }
 
-function IssueTable({ issues, rowMap }: { issues: Issue[]; rowMap: number[] }) {
-  const [limit, setLimit] = useState(100);
+function SummaryTile({ label, value, sub }: { label: string; value: ReactNode; sub?: string }) {
   return (
-    <>
-      <Table className="max-h-80">
-        <thead>
-          <tr>
-            <Th>File row</Th>
-            <Th>Severity</Th>
-            <Th>Field</Th>
-            <Th>Code</Th>
-            <Th>Message</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {issues.slice(0, limit).map((i, idx) => (
-            <tr key={idx}>
-              <Td className="font-mono text-xs">{i.row < 0 ? 'import' : sourceRowOf(rowMap, i.row)}</Td>
-              <Td><Badge tone={i.severity === 'error' ? 'red' : 'amber'}>{i.severity}</Badge></Td>
-              <Td className="font-mono text-xs">{i.field}</Td>
-              <Td className="font-mono text-xs">{i.code}</Td>
-              <Td>{i.message}</Td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
-      {issues.length > limit && (
-        <Button size="sm" variant="ghost" className="mt-2" onClick={() => setLimit((l) => l + 200)}>
-          Show more ({issues.length - limit} remaining)
-        </Button>
-      )}
-    </>
+    <div className="min-w-0 rounded-xl border border-slate-200/80 bg-white px-3.5 py-3">
+      <div className="truncate text-xs font-medium text-slate-500" title={label}>{label}</div>
+      <div className="mt-0.5 truncate text-xl font-semibold tracking-tight text-slate-900 tabular">{value}</div>
+      {sub && <div className="truncate text-[11px] text-slate-400" title={sub}>{sub}</div>}
+    </div>
   );
 }
 
-function ProcessSummary({ navigate }: { navigate: (p: PageId) => void }) {
+function ProcessChooser({ onExplore }: { onExplore: () => void }) {
   const { state, dispatch } = useStore();
-  const { traces, dfg, variants } = useAnalysis();
-  const all = traces?.status === 'ok' ? traces.data : [];
+  const { traces } = useAnalysis();
   const rows = useMemo(() => {
-    const by = new Map<string, { cases: number; rows: number; discovery: number; emptyCases: number }>();
-    for (const t of all) {
-      const r = by.get(t.processType) ?? { cases: 0, rows: 0, discovery: 0, emptyCases: 0 };
+    const by = new Map<string, { cases: number; rows: number }>();
+    for (const t of traces?.status === 'ok' ? traces.data : []) {
+      const r = by.get(t.processType) ?? { cases: 0, rows: 0 };
       r.cases += 1;
       r.rows += t.events.length;
-      r.discovery += t.sequence.length;
-      if (!t.sequence.length) r.emptyCases += 1;
       by.set(t.processType, r);
     }
     return [...by.entries()].sort(([a], [b]) => a.localeCompare(b));
-  }, [all]);
-
+  }, [traces]);
   return (
-    <Card title="Processes" subtitle="Cases per process from groupCases. Each process is mined separately; there is no cross-process DFG.">
-      <Table>
-        <thead>
-          <tr>
-            <Th>Process</Th>
-            <Th align="right">Cases</Th>
-            <Th align="right">Accepted rows</Th>
-            <Th align="right">Discovery events</Th>
-            <Th align="right">Empty discovered cases</Th>
-            <Th />
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(([key, r]) => (
-            <tr key={key} className={cx(state.view.processKey === key && 'bg-brand-50/50')}>
-              <Td>
-                <div className="font-medium text-slate-800">{processLabel(key, state.dataset?.festival)}</div>
-                <div className="font-mono text-xs text-slate-400">{key}</div>
-              </Td>
-              <Td align="right">{r.cases.toLocaleString('en-US')}</Td>
-              <Td align="right">{r.rows.toLocaleString('en-US')}</Td>
-              <Td align="right">{r.discovery.toLocaleString('en-US')}</Td>
-              <Td align="right">{r.emptyCases ? <Badge tone="amber">{r.emptyCases}</Badge> : 0}</Td>
-              <Td align="right">
-                {state.view.processKey === key ? (
-                  <Badge tone="brand">selected</Badge>
-                ) : (
-                  <Button size="sm" onClick={() => dispatch({ type: 'SET_VIEW', view: { processKey: key } })}>Select</Button>
-                )}
-              </Td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
-      <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Activities (selected scope)" value={<EngineGate result={dfg} compact>{(d) => d.nodes.length}</EngineGate>} />
-        <Stat label="Variants (selected scope)" value={<EngineGate result={variants} compact>{(v) => v.length}</EngineGate>} />
-        <div className="col-span-2 flex items-center justify-end">
-          <Button variant="primary" onClick={() => navigate('analysis')}>Open process analysis →</Button>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-function TraceTable() {
-  const { dispatch } = useStore();
-  const { selectedTraces } = useAnalysis();
-  const [q, setQ] = useState('');
-  const [limit, setLimit] = useState(25);
-  const shown = useMemo(
-    () => (q ? selectedTraces.filter((t) => caseLabel(t.caseKey).toLowerCase().includes(q.toLowerCase())) : selectedTraces),
-    [selectedTraces, q],
-  );
-  return (
-    <Card
-      title="Trace view"
-      subtitle="Cases in the current process and filter scope. Click a case to see every accepted row."
-      actions={<Input placeholder="Search case ID" className="!w-48 !py-1 text-xs" value={q} onChange={(e) => setQ(e.target.value)} />}
-    >
-      <Table className="max-h-96">
-        <thead>
-          <tr>
-            <Th>Case</Th>
-            <Th>First event</Th>
-            <Th align="right">Rows</Th>
-            <Th align="right">Discovery events</Th>
-            <Th align="right">Elapsed</Th>
-            <Th>Sequence</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {shown.slice(0, limit).map((t) => (
-            <tr key={t.caseKey} className="cursor-pointer hover:bg-slate-50" onClick={() => dispatch({ type: 'SET_VIEW', view: { selectedCaseKey: t.caseKey } })}>
-              <Td className="font-mono text-xs font-medium text-brand-700">{caseLabel(t.caseKey)}</Td>
-              <Td className="whitespace-nowrap text-xs">{fmtInstant(t.events[0]?.timestampMs)}</Td>
-              <Td align="right">{t.events.length}</Td>
-              <Td align="right">{t.sequence.length || <Badge tone="amber">empty</Badge>}</Td>
-              <Td align="right">{fmtMinutes(t.elapsedMin)}</Td>
-              <Td className="max-w-md truncate text-xs text-slate-500">{t.sequence.map((e) => e.activity).join(' → ')}</Td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
-      {shown.length > limit && (
-        <Button size="sm" variant="ghost" className="mt-2" onClick={() => setLimit((l) => l + 100)}>
-          Show more ({shown.length - limit} remaining)
-        </Button>
-      )}
-    </Card>
-  );
-}
-
-function EngineStatusCard() {
-  const a = useAnalysis();
-  const results: Partial<Record<string, EngineResult<unknown> | null>> = {
-    validateAndNormalize: a.validation,
-    groupCases: a.traces,
-    buildDFG: a.dfg,
-    getVariants: a.variants,
-    getCaseDurations: a.durations,
-    getPerformance: a.performance,
-    getResourceAnalysis: a.resources,
-    getKPIs: a.kpis,
-    getFindings: a.findings,
-    evaluateTargets: a.evaluations,
-  };
-  const tone = (s?: string) =>
-    s === 'ok' ? 'green' : s === 'not_implemented' ? 'amber' : s === 'error' ? 'red' : s === 'fixture_unavailable' ? 'amber' : 'neutral';
-  return (
-    <Card
-      title="Engine connection"
-      subtitle={a.provider === 'ui_fixture' ? 'Provider: UI fixture (hand-authored values)' : 'Provider: src/engine (Codex). Status of each call for the current scope.'}
-    >
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {ENGINE_FUNCTIONS.map((fn) => {
-          const r = results[fn];
-          const label = fn === 'getGateInputs' || fn === 'simulateGateQueue' ? 'on demand (Refine)' : r ? r.status.replace('_', ' ') : 'not called';
+    <Card title="Processes in this log" subtitle="Each process is mined on its own — logs of different processes are never merged into one trace.">
+      <div className="grid gap-2 md:grid-cols-3">
+        {rows.map(([key, r]) => {
+          const active = state.view.processKey === key;
+          const info = state.dataset?.festival ? FESTIVAL_PROCESS_INFO[key] : undefined;
           return (
-            <div key={fn} className="flex items-center justify-between rounded border border-slate-200 px-2.5 py-1.5" title={r && r.status !== 'ok' ? r.message : undefined}>
-              <code className="font-mono text-xs text-slate-700">{fn}</code>
-              <Badge tone={tone(r?.status)}>{label}</Badge>
-            </div>
+            <button
+              key={key}
+              type="button"
+              aria-pressed={active}
+              onClick={() => dispatch({ type: 'SET_VIEW', view: { processKey: key } })}
+              className={cx('rounded-xl border px-3 py-2.5 text-left transition', active ? 'border-brand-400 bg-brand-50/60 ring-1 ring-brand-200' : 'border-slate-200 hover:border-slate-300')}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[13px] font-semibold text-slate-800">{processLabel(key, state.dataset?.festival)}</span>
+                {active && <Icon name="check" className="h-4 w-4 text-brand-600" />}
+              </div>
+              <div className="mt-0.5 text-xs text-slate-500 tabular">{plural(r.cases, 'case')} · {plural(r.rows, 'row')}</div>
+              {info && <div className="mt-1 text-[11.5px] leading-snug text-slate-500">{info.question}</div>}
+            </button>
           );
         })}
       </div>
+      <div className="mt-3 flex justify-end">
+        <Button variant="subtle" iconRight="arrowRight" onClick={onExplore}>Explore selected process</Button>
+      </div>
+    </Card>
+  );
+}
+
+function Provenance() {
+  const { state } = useStore();
+  const d = state.dataset!;
+  const m = d.metadata;
+  const synthetic = d.sourceKind !== 'user_upload' || m?.sourceType === 'synthetic';
+  const info = d.festival && state.view.processKey ? FESTIVAL_PROCESS_INFO[state.view.processKey] : undefined;
+  return (
+    <Card title="Where this data comes from" subtitle={synthetic ? 'Synthetic data: generated for demonstration, not observed operations.' : 'Your file. It stays in this browser and is not uploaded.'}>
+      <KeyValue
+        items={[
+          ['Source', d.sourceKind === 'bundled_sample' ? 'Bundled sample' : d.sourceKind === 'festival_sample' ? 'Published Festival sample' : d.sourceKind === 'ui_fixture' ? 'Interface test log' : 'Uploaded by you'],
+          ['Data type', synthetic ? <Badge tone="violet">Synthetic</Badge> : <Badge tone="blue">Your data</Badge>],
+          ['File', <span className="break-all">{d.sourceName}{d.format === 'xes' ? ' (XES)' : ' (CSV)'}</span>],
+          ...(m?.timezone ? ([['Timezone', m.timezone]] as [string, string][]) : []),
+          ...(d.manifest?.generator ? ([['Generator', `${d.manifest.generator.version ?? '—'} · seed ${d.manifest.generator.seed ?? '—'}`]] as [string, string][]) : []),
+        ]}
+      />
+      {info && (
+        <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2.5 text-[12.5px] leading-relaxed text-slate-600">
+          <div className="font-semibold text-slate-800">{processLabel(state.view.processKey!, true)}</div>
+          <div><span className="text-slate-500">One case =</span> {info.caseMeaning}</div>
+          <div><span className="text-slate-500">Purpose:</span> {info.purpose}</div>
+          <div><span className="text-slate-500">Actors:</span> {info.actors}</div>
+          <div><span className="text-slate-500">From → to:</span> {info.boundary}</div>
+        </div>
+      )}
+      {m?.assumptions?.length ? (
+        <details className="mt-3 text-[12.5px] text-slate-600">
+          <summary className="cursor-pointer font-medium text-slate-700">{plural(m.assumptions.length, 'modeling assumption')}</summary>
+          <ul className="mt-1 list-disc space-y-0.5 pl-4">{m.assumptions.map((a) => <li key={a}>{a}</li>)}</ul>
+        </details>
+      ) : null}
+      {m?.sourceReferences?.length ? (
+        <details className="mt-2 text-[12.5px] text-slate-600">
+          <summary className="cursor-pointer font-medium text-slate-700">{plural(m.sourceReferences.length, 'public reference')}</summary>
+          <ul className="mt-1 list-disc space-y-0.5 break-all pl-4">{m.sourceReferences.map((a) => <li key={a}>{a}</li>)}</ul>
+        </details>
+      ) : null}
     </Card>
   );
 }

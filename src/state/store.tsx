@@ -1,7 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, type Dispatch, type ReactNode } from 'react';
 import type { Target } from '../contracts';
+import type { BpmnMappingOverride } from '../v03-contracts';
 import type {
   AppState,
+  AutomationCandidate,
+  BpmnRevisionRef,
+  GenericQueueParams,
+  GenericScenarioRecord,
   DatasetState,
   WorkspaceMeta,
   DesignRecord,
@@ -22,21 +27,46 @@ const STORAGE_KEY = 'processpilot.workspaces.v2';
 /** Pre-1.1 storage (dataset + process only). Read once for the history view, never modified or deleted. */
 const LEGACY_STORAGE_KEY = 'processpilot.workspaces.v1';
 
-/** Dataset revision: content + mapping + import policy + structural exclusions + Festival adapter settings. */
+/** Phase 2 inference of Festival import warnings (V03_CONTRACT §3 I-4). */
+export function legacyFestivalValidation(d: Pick<DatasetState, 'requireProcessType' | 'mapping'>): boolean {
+  return d.requireProcessType === true && Boolean(d.mapping.festival_id?.trim());
+}
+
+/**
+ * Dataset revision: content + mapping + import policy + structural exclusions + Festival adapter settings.
+ * I-4: the effective `festivalValidation` policy is appended only when it differs from the Phase 2
+ * inference, so equivalent policies keep their prior fingerprint (and saved workspaces).
+ * XES datasets use a distinct format-tagged fingerprint.
+ */
 export function datasetIdFor(d: Omit<DatasetState, 'id'>): string {
-  return fingerprint(
-    JSON.stringify([
-      d.contentFingerprint,
-      d.mapping,
-      d.missingResources,
-      d.fixedOffset ?? null,
-      d.acceptExclusions,
-      d.requireProcessType,
-      d.malformedRows.map((m) => m.sourceRow),
-      d.festival,
-      d.festival ? d.festivalSettings ?? null : null,
-    ]),
-  );
+  const base: unknown[] = [
+    d.contentFingerprint,
+    d.mapping,
+    d.missingResources,
+    d.fixedOffset ?? null,
+    d.acceptExclusions,
+    d.requireProcessType,
+    d.malformedRows.map((m) => m.sourceRow),
+    d.festival,
+    d.festival ? d.festivalSettings ?? null : null,
+  ];
+  if (d.festival !== legacyFestivalValidation(d)) base.push(['festivalValidation', 'v0.3', d.festival]);
+  if (d.format === 'xes') base.unshift('xes');
+  return fingerprint(JSON.stringify(base));
+}
+
+export function defaultGenericQueueParams(): GenericQueueParams {
+  return {
+    arrivalActivity: '',
+    arrivalLifecycle: '',
+    serviceMode: 'observed',
+    serviceActivity: '',
+    assumedServiceSec: null,
+    baselineServers: null,
+    candidateServers: null,
+    serviceMultiplier: 1,
+    assumeOneWorkerPerServer: false,
+  };
 }
 
 export function defaultScenarioParams(dataset: DatasetState | null): ScenarioParams {
@@ -79,6 +109,13 @@ export function emptyWorkspace(dataset: DatasetState, meta: WorkspaceMeta): Proc
     selectedScenarioId: null,
     plans: [],
     activePlanId: null,
+    automation: [],
+    genericQueueParams: defaultGenericQueueParams(),
+    genericParamsRevision: 0,
+    genericScenarios: [],
+    bpmnRevisions: [],
+    bpmnOverrides: [],
+    completionActivities: [],
   };
 }
 
@@ -113,6 +150,13 @@ export type Action =
   | { type: 'ADD_TASK'; planId: string; task: PlanTask }
   | { type: 'REMOVE_TASK'; planId: string; taskId: string }
   | { type: 'ADD_BPMN'; name: string; xml: string }
+  | { type: 'UPSERT_AUTOMATION'; candidate: AutomationCandidate }
+  | { type: 'DELETE_AUTOMATION'; id: string }
+  | { type: 'SET_GENERIC_PARAMS'; params: Partial<GenericQueueParams> }
+  | { type: 'ADD_GENERIC_SCENARIO'; scenario: GenericScenarioRecord }
+  | { type: 'ADD_BPMN_REVISION'; revision: BpmnRevisionRef; xml: string }
+  | { type: 'SET_BPMN_OVERRIDES'; overrides: BpmnMappingOverride[] }
+  | { type: 'SET_COMPLETION'; activities: string[] }
   | { type: 'TOAST'; tone: Toast['tone']; message: string }
   | { type: 'DISMISS_TOAST'; id: number };
 
@@ -250,6 +294,31 @@ export function reducer(state: AppState, action: Action): AppState {
       );
     case 'ADD_BPMN':
       return { ...state, bpmnDocs: { ...state.bpmnDocs, [action.name]: action.xml } };
+    case 'UPSERT_AUTOMATION':
+      return updateWorkspace(state, (ws) => {
+        const list = ws.automation ?? [];
+        const exists = list.some((c) => c.id === action.candidate.id);
+        return { ...ws, automation: exists ? list.map((c) => (c.id === action.candidate.id ? action.candidate : c)) : [...list, action.candidate] };
+      });
+    case 'DELETE_AUTOMATION':
+      return updateWorkspace(state, (ws) => ({ ...ws, automation: (ws.automation ?? []).filter((c) => c.id !== action.id) }));
+    case 'SET_GENERIC_PARAMS':
+      // Any parameter edit invalidates generic queue results (revision bump).
+      return updateWorkspace(state, (ws) => ({
+        ...ws,
+        genericQueueParams: { ...(ws.genericQueueParams ?? defaultGenericQueueParams()), ...action.params },
+        genericParamsRevision: (ws.genericParamsRevision ?? 0) + 1,
+      }));
+    case 'ADD_GENERIC_SCENARIO':
+      return updateWorkspace(state, (ws) => ({ ...ws, genericScenarios: [...(ws.genericScenarios ?? []), action.scenario] }));
+    case 'ADD_BPMN_REVISION': {
+      const next = { ...state, bpmnDocs: { ...state.bpmnDocs, [action.revision.docName]: action.xml } };
+      return updateWorkspace(next, (ws) => ({ ...ws, bpmnRevisions: [...(ws.bpmnRevisions ?? []), action.revision] }));
+    }
+    case 'SET_BPMN_OVERRIDES':
+      return updateWorkspace(state, (ws) => ({ ...ws, bpmnOverrides: action.overrides }));
+    case 'SET_COMPLETION':
+      return updateWorkspace(state, (ws) => ({ ...ws, completionActivities: action.activities }));
     case 'TOAST':
       return {
         ...state,
@@ -356,6 +425,11 @@ export function useWorkspace(): ProcessWorkspace | null {
 export function useWorkspaceKey(): string | null {
   const { state } = useStore();
   return currentWorkspaceKey(state.dataset, state.view);
+}
+
+/** Reads v0.3 optional workspace fields with their defaults (records saved before v0.3 lack them). */
+export function wsAutomation(ws: ProcessWorkspace | null | undefined): AutomationCandidate[] {
+  return ws?.automation ?? [];
 }
 
 export function uid(prefix: string) {

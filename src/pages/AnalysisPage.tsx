@@ -1,457 +1,848 @@
-import { useCallback, useMemo, useState } from 'react';
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+/**
+ * Analysis — Process Explorer. One graph-first workspace with seven modes and a
+ * right-hand Inspector that always shows the cases behind a selected number.
+ * All values come from engine DTOs via useAnalysis(); this page only selects,
+ * highlights and formats them.
+ */
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { DFG, Finding, GapSummary, ResourceAnalysis, Variant } from '../contracts';
+import type { ReplayFrame } from '../v03-contracts';
 import { useAnalysis } from '../state/analysis';
-import { uid, useStore, useWorkspace } from '../state/store';
+import { useStore, useWorkspace } from '../state/store';
 import { gateScenarioAvailable } from '../festival/adapter';
-import type { DesignRecord, PageId } from '../state/types';
-import { caseLabel, displayResourceKeys, fmtMinutes, fmtNumber, fmtPct, fmtShare, fmtValue, plural, resourceLabel } from '../lib/format';
-import { FlowGraph, GraphLegend, type GraphEdgeSpec, type GraphNodeSpec, type GraphSelection } from '../components/graph/FlowGraph';
-import { CaseKeyList } from '../components/cases';
+import type { AnalysisMode, PageId } from '../state/types';
+import { fmtMinutes, fmtNumber, fmtPct, fmtShare, plural, resourceLabel } from '../lib/format';
+import { FlowGraph, type GraphSelection } from '../components/graph/FlowGraph';
 import { RequireData } from '../components/layout';
-import { Badge, Button, Card, EmptyState, EngineGate, Input, KeyValue, Notice, PageHeader, Stat, Table, Tabs, Td, Th, cx } from '../components/ui';
+import { Icon, type IconName } from '../components/icons';
+import { Badge, Button, EngineGate, InfoTip, Meter, Metric, Notice, SectionLabel, Segmented, Unavailable, cx } from '../components/ui';
+import {
+  END,
+  START,
+  dfgGraph,
+  edgeId,
+  edgesHighlight,
+  endEdgeId,
+  fmtGap,
+  gapFor,
+  handoffGraph,
+  hEdge,
+  heatColor,
+  nodeId,
+  parseEdgeId,
+  pathHighlight,
+  rNode,
+  serviceFor,
+  startEdgeId,
+  type GapType,
+  type Highlight,
+} from './analysis/graphs';
+import { CaseList, CaseTimeline, FindingCard, designFromFinding, findingRule } from './analysis/inspector';
+import { PatternsPanel, ReplayBar, ReworkPanel, VariantList } from './analysis/modes';
 
-type Tab = 'map' | 'variants' | 'performance' | 'resources' | 'findings';
+const MODES: { id: AnalysisMode; label: string; icon: IconName; help: string }[] = [
+  { id: 'frequency', label: 'Frequency', icon: 'graph', help: 'Boxes are activities, arrows are what directly followed what in the same case. Numbers count how often.' },
+  { id: 'performance', label: 'Performance', icon: 'clock', help: 'Arrows are coloured by the average time between steps. Red = slower. Each value shows how many observations it is based on.' },
+  { id: 'variants', label: 'Variants', icon: 'route', help: 'A variant is one exact path through the process. Pick one to see it on the map and the cases that followed it.' },
+  { id: 'rework', label: 'Rework', icon: 'repeat', help: 'Where the same activity happens more than once in a case. Repetition is not automatically an error.' },
+  { id: 'handover', label: 'Hand-overs', icon: 'users', help: 'Who passes work to whom: an arrow means one resource’s step was directly followed by another resource’s step in the same case (WTN-inspired).' },
+  { id: 'patterns', label: 'Patterns', icon: 'branch', help: 'Observed sequences, alternative next steps, loops and overlapping activities (ICN-inspired). Candidates only — not proven gateways.' },
+  { id: 'replay', label: 'Replay', icon: 'play', help: 'Play the log over time: each case sits on its latest recorded activity. Only recorded states are shown; no waiting is invented.' },
+];
+
+type InspectorView =
+  | { kind: 'none' }
+  | { kind: 'case'; caseKey: string; back: InspectorView }
+  | { kind: 'finding'; id: string };
 
 export function AnalysisPage({ navigate }: { navigate: (p: PageId) => void }) {
-  const [tab, setTab] = useState<Tab>('map');
-  const { findings, variants } = useAnalysis();
   return (
-    <div>
-      <PageHeader
-        phase="Phase 1 · Process analysis"
-        title="Analysis"
-        subtitle="Directly-follows graph, variants, performance, resource workload and handoffs, and evidence-linked findings for the selected process and case scope."
+    <RequireData navigate={navigate}>
+      <Explorer navigate={navigate} />
+    </RequireData>
+  );
+}
+
+function Explorer({ navigate }: { navigate: (p: PageId) => void }) {
+  const { state, dispatch } = useStore();
+  const ws = useWorkspace();
+  const a = useAnalysis();
+  const { dfg, performance, resources, variants, findings, kpis, scope, traceByKey, activityEvidence } = a;
+  const mode: AnalysisMode = state.view.analysisMode ?? 'frequency';
+  const setMode = useCallback((m: AnalysisMode) => dispatch({ type: 'SET_VIEW', view: { analysisMode: m } }), [dispatch]);
+
+  const [selection, setSelection] = useState<GraphSelection>(null);
+  const [inspector, setInspector] = useState<InspectorView>({ kind: 'none' });
+  const [minDfg, setMinDfg] = useState(1);
+  const [minWtn, setMinWtn] = useState(1);
+  const [perfMetric, setPerfMetric] = useState<GapType>('inter_event');
+  const [variantId, setVariantId] = useState<string | null>(null);
+  const [focus, setFocus] = useState<Set<string>>(() => new Set());
+  const [patternHl, setPatternHl] = useState<Highlight | null>(null);
+  const [replayFrame, setReplayFrame] = useState<ReplayFrame | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [rankdir, setRankdir] = useState<'TB' | 'LR'>('TB');
+
+  // Reset transient selection when the analysis scope changes.
+  useEffect(() => {
+    setSelection(null);
+    setInspector({ kind: 'none' });
+    setVariantId(null);
+    setFocus(new Set());
+    setPatternHl(null);
+  }, [scope?.datasetId, scope?.processKey, scope?.analysisFilterFingerprint]);
+
+  const changeMode = (m: AnalysisMode) => {
+    setMode(m);
+    setSelection(null);
+    setPatternHl(null);
+    if (inspector.kind === 'case') setInspector({ kind: 'none' });
+  };
+
+  // Cross-page focus request (e.g. Monitor → "show on map").
+  const focusReq = state.view.analysisFocus;
+  useEffect(() => {
+    if (!focusReq) return;
+    setMode(focusReq.mode);
+    if (focusReq.edge) setSelection({ type: 'edge', id: edgeId(focusReq.edge.from, focusReq.edge.to) });
+    else if (focusReq.activity) setSelection({ type: 'node', id: nodeId(focusReq.activity) });
+    if (focusReq.findingId) setInspector({ kind: 'finding', id: focusReq.findingId });
+    dispatch({ type: 'SET_VIEW', view: { analysisFocus: null } });
+  }, [focusReq, dispatch, setMode]);
+
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setFullscreen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [fullscreen]);
+
+  const dfgData = dfg?.status === 'ok' ? dfg.data : null;
+  const perf = performance?.status === 'ok' ? performance.data : null;
+  const ra = resources?.status === 'ok' ? resources.data : null;
+  const vs = variants?.status === 'ok' ? variants.data : null;
+  const fs = useMemo(() => (findings?.status === 'ok' ? findings.data : []), [findings]);
+  const ae = activityEvidence?.status === 'ok' ? activityEvidence.data : null;
+  const selectedVariant = vs?.find((v) => v.id === variantId) ?? null;
+  const caseKey = inspector.kind === 'case' ? inspector.caseKey : null;
+  const activeFinding = inspector.kind === 'finding' ? fs.find((f) => f.id === inspector.id) ?? null : null;
+
+  /* ---------- highlight (case path > variant > finding > pattern) ---------- */
+  const highlight = useMemo<Highlight | null>(() => {
+    if (caseKey) {
+      const t = traceByKey.get(caseKey);
+      if (!t) return null;
+      if (mode === 'handover') {
+        const nodes = new Set<string>();
+        const edges = new Set<string>();
+        let prev: string | null = null;
+        for (const e of t.sequence) {
+          if (!e.resource) {
+            prev = null;
+            continue;
+          }
+          nodes.add(rNode(e.resource));
+          if (prev && prev !== e.resource) edges.add(hEdge(prev, e.resource));
+          prev = e.resource;
+        }
+        return { nodes, edges };
+      }
+      return pathHighlight(t.sequence.map((e) => e.activity));
+    }
+    if (mode === 'variants' && selectedVariant) return pathHighlight(selectedVariant.activities);
+    if (activeFinding?.edge && mode !== 'handover') return edgesHighlight([activeFinding.edge]);
+    if (mode === 'patterns' && patternHl) return patternHl;
+    if (mode === 'rework' && dfgData) {
+      const loops = dfgData.edges.filter((e) => e.from === e.to);
+      const repeated = ae ? ae.activities.filter((x) => x.extraOccurrenceCount > 0).map((x) => x.activity) : [];
+      if (loops.length || repeated.length) return edgesHighlight(loops, repeated);
+    }
+    return null;
+  }, [caseKey, traceByKey, mode, selectedVariant, activeFinding, patternHl, dfgData, ae]);
+
+  /* ---------- graph spec ---------- */
+  const perfScale = useMemo(() => {
+    if (!perf || !dfgData) return null;
+    const vals = dfgData.edges
+      .filter((e) => e.count >= minDfg)
+      .map((e) => gapFor(perf.gaps, perfMetric, e.from, e.to)?.meanMin)
+      .filter((v): v is number => v !== undefined);
+    if (!vals.length) return { min: 0, max: 0, any: false };
+    return { min: Math.min(...vals), max: Math.max(...vals), any: true };
+  }, [perf, dfgData, perfMetric, minDfg]);
+
+  const replayBadges = useMemo(() => {
+    if (mode !== 'replay' || !replayFrame) return null;
+    const by = new Map<string, { latest: number; active: number; done: number }>();
+    for (const c of replayFrame.cases) {
+      const act = c.active[0]?.activity ?? c.latest.activity;
+      const r = by.get(act) ?? { latest: 0, active: 0, done: 0 };
+      if (c.state === 'active') r.active += 1;
+      else if (c.state === 'completed') r.done += 1;
+      else r.latest += 1;
+      by.set(act, r);
+    }
+    return by;
+  }, [mode, replayFrame]);
+
+  const graph = useMemo(() => {
+    if (mode === 'handover') return ra ? handoffGraph(ra, focus, minWtn, highlight) : null;
+    if (!dfgData) return null;
+    const gaps = perf?.gaps ?? null;
+    const aeBy = ae ? new Map(ae.activities.map((x) => [x.activity, x])) : null;
+    return dfgGraph(dfgData, {
+      minCount: minDfg,
+      highlight,
+      edgeLabel:
+        mode === 'performance'
+          ? (e) => {
+              const g = gapFor(gaps, perfMetric, e.from, e.to);
+              return g ? fmtMinutes(g.meanMin) : 'no data';
+            }
+          : undefined,
+      edgeColor:
+        mode === 'performance' && perfScale?.any
+          ? (e) => {
+              const g = gapFor(gaps, perfMetric, e.from, e.to);
+              if (!g) return undefined;
+              const span = perfScale.max - perfScale.min;
+              return heatColor(span > 0 ? (g.meanMin - perfScale.min) / span : 0.5);
+            }
+          : undefined,
+      edgeNoData: mode === 'performance' ? (e) => !gapFor(gaps, perfMetric, e.from, e.to) : undefined,
+      nodeText: (n) => {
+        if (mode === 'performance') {
+          const s = serviceFor(gaps, n.activity);
+          return { primary: n.count.toLocaleString('en-US'), secondary: s ? `service ${fmtMinutes(s.meanMin)} · n=${s.n}` : 'no service time' };
+        }
+        if (mode === 'rework' && aeBy) {
+          const x = aeBy.get(n.activity);
+          if (x && x.extraOccurrenceCount > 0) {
+            return { badge: `+${x.extraOccurrenceCount}`, badgeTone: 'amber', accent: '#f59e0b', secondary: `${plural(x.repeatedCaseKeys.length, 'case')} repeat` };
+          }
+        }
+        if (mode === 'replay' && replayBadges) {
+          const r = replayBadges.get(n.activity);
+          const total = r ? r.latest + r.active + r.done : 0;
+          return total
+            ? { badge: String(total), badgeTone: r!.active ? 'brand' : r!.done === total ? 'green' : 'slate', secondary: [r!.active && `${r!.active} active`, r!.latest && `${r!.latest} here`, r!.done && `${r!.done} done`].filter(Boolean).join(' · ') }
+            : { secondary: 'no cases here now' };
+        }
+        return {};
+      },
+    });
+  }, [mode, ra, focus, minWtn, highlight, dfgData, perf, ae, minDfg, perfMetric, perfScale, replayBadges]);
+
+  const onSelect = useCallback((s: GraphSelection) => {
+    setSelection(s);
+    setInspector((cur) => (cur.kind === 'case' ? { kind: 'none' } : cur.kind === 'finding' ? { kind: 'none' } : cur));
+  }, []);
+
+  const pickCase = (k: string) => setInspector((cur) => ({ kind: 'case', caseKey: k, back: cur.kind === 'case' ? cur.back : cur }));
+
+  /* ---------- findings → design / show on map ---------- */
+  const metrics = kpis?.status === 'ok' ? kpis.data : [];
+  const createDesign = (f: Finding) => {
+    if (!scope) return;
+    dispatch({ type: 'UPSERT_DESIGN', design: designFromFinding(f, metrics, gateScenarioAvailable(state.dataset?.festival, scope.processKey)) });
+    dispatch({ type: 'TOAST', tone: 'success', message: 'Design started from this finding.' });
+    navigate('design');
+  };
+  const showFinding = (f: Finding) => {
+    const rule = findingRule(f);
+    if (f.edge) {
+      changeMode('performance');
+      if (f.metricId === 'matched_gap') setPerfMetric('matched_gap');
+      else if (f.metricId === 'inter_event') setPerfMetric('inter_event');
+      setSelection({ type: 'edge', id: edgeId(f.edge.from, f.edge.to) });
+    } else if (rule === 'rework') changeMode('rework');
+    else if (rule === 'workload') changeMode('handover');
+    setInspector({ kind: 'finding', id: f.id });
+  };
+
+  const modeMeta = MODES.find((m) => m.id === mode)!;
+  const minMax = mode === 'handover' ? Math.max(1, ...(ra?.handoffs.map((h) => h.count) ?? [1])) : Math.max(1, ...(dfgData?.edges.map((e) => e.count) ?? [1]));
+
+  /* ---------- inspector ---------- */
+  let inspectorBody: ReactNode;
+  if (inspector.kind === 'case') {
+    inspectorBody = <CaseTimeline caseKey={inspector.caseKey} onBack={() => setInspector(inspector.back)} backLabel="Back" />;
+  } else if (activeFinding) {
+    inspectorBody = (
+      <div className="space-y-3">
+        <button type="button" onClick={() => setInspector({ kind: 'none' })} className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-800">
+          <Icon name="arrowLeft" className="h-3.5 w-3.5" /> All findings
+        </button>
+        <FindingCard f={activeFinding} active onDesign={() => createDesign(activeFinding)} linkedDesigns={ws?.designs.filter((d) => d.findingIds.includes(activeFinding.id)).length ?? 0} />
+        <CaseList caseKeys={activeFinding.caseKeys} onPick={pickCase} label={activeFinding.evidenceKind === 'metric_contributors' ? 'Cases contributing to the metric' : 'Evidence cases'} />
+      </div>
+    );
+  } else if (mode === 'handover' && ra) {
+    inspectorBody = <HandoverInspector ra={ra} selection={selection} onSelect={setSelection} onPick={pickCase} />;
+  } else if (mode === 'variants' && vs && selectedVariant) {
+    inspectorBody = <VariantInspector v={selectedVariant} onPick={pickCase} />;
+  } else if (mode === 'rework' && !selection) {
+    inspectorBody = <ReworkPanel dfg={dfgData} onPick={pickCase} onSelectActivity={(act) => setSelection({ type: 'node', id: nodeId(act) })} />;
+  } else if (mode === 'patterns' && !selection) {
+    inspectorBody = <PatternsPanel onHighlight={setPatternHl} onPick={pickCase} />;
+  } else if (selection && dfgData) {
+    inspectorBody = (
+      <DfgInspector
+        dfg={dfgData}
+        selection={selection}
+        gaps={perf?.gaps ?? null}
+        coverage={perf?.transitionCoverage}
+        onSelect={setSelection}
+        onPick={pickCase}
+        repeat={ae?.activities}
       />
-      <RequireData navigate={navigate}>
-        <Tabs<Tab>
-          value={tab}
-          onChange={setTab}
-          tabs={[
-            { id: 'map', label: 'Process map (DFG)' },
-            { id: 'variants', label: 'Variants', count: variants?.status === 'ok' ? variants.data.length : undefined },
-            { id: 'performance', label: 'Performance' },
-            { id: 'resources', label: 'Resources & handoffs' },
-            { id: 'findings', label: 'Findings', count: findings?.status === 'ok' ? findings.data.length : undefined },
+    );
+  } else if (mode === 'replay' && replayFrame) {
+    inspectorBody = <ReplayInspector frame={replayFrame} onPick={pickCase} />;
+  } else {
+    inspectorBody = (
+      <DefaultInspector
+        mode={mode}
+        findings={fs}
+        onShow={showFinding}
+        onDesign={createDesign}
+        linked={(id) => ws?.designs.filter((d) => d.findingIds.includes(id)).length ?? 0}
+        dfg={dfgData}
+        ra={ra}
+      />
+    );
+  }
+
+  /* ---------- toolbar ---------- */
+  const stats = graph?.stats;
+  const toolbar = (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-slate-100 px-3 py-2">
+      {(mode === 'frequency' || mode === 'performance' || mode === 'handover' || mode === 'rework') && (
+        <label className="flex items-center gap-2 text-xs text-slate-600" title="Display filter only. Calculations, findings and exports always use every transition.">
+          <Icon name="filter" className="h-3.5 w-3.5 text-slate-400" />
+          Hide arrows seen fewer than
+          <input
+            type="range"
+            min={1}
+            max={minMax}
+            value={mode === 'handover' ? minWtn : minDfg}
+            onChange={(e) => (mode === 'handover' ? setMinWtn : setMinDfg)(Number(e.target.value))}
+            className="w-28 accent-brand-600"
+            aria-label="Minimum arrow count"
+          />
+          <b className="w-6 tabular text-slate-800">{mode === 'handover' ? minWtn : minDfg}×</b>
+        </label>
+      )}
+      {mode === 'performance' && (
+        <Segmented<GapType>
+          size="sm"
+          ariaLabel="Time measure"
+          value={perfMetric}
+          onChange={setPerfMetric}
+          options={[
+            { id: 'inter_event', label: 'Time between steps', title: 'Inter-event gap: time between consecutive recorded steps (not necessarily waiting).' },
+            { id: 'matched_gap', label: 'Wait before next start', title: 'Matched gap: from a completion to the next activity’s recorded start. Needs start/complete events.' },
           ]}
         />
-        {tab === 'map' && <ProcessMap />}
-        {tab === 'variants' && <Variants />}
-        {tab === 'performance' && <Performance />}
-        {tab === 'resources' && <Resources />}
-        {tab === 'findings' && <Findings navigate={navigate} />}
-      </RequireData>
+      )}
+      {mode === 'handover' && ra && <ResourceFocus all={ra.resources.map((r) => r.resource)} focus={focus} onChange={(f) => { setFocus(f); setSelection(null); }} />}
+      {stats && (mode === 'frequency' || mode === 'performance' || mode === 'handover' || mode === 'rework') && (
+        <span className="text-xs text-slate-500 tabular">
+          Showing <b className="text-slate-700">{stats.shownEdges}</b> of {plural(stats.totalEdges, mode === 'handover' ? 'hand-over pair' : 'transition')}
+          {stats.shownEdges < stats.totalEdges && <Badge tone="brand" className="ml-1.5">display filter · results unchanged</Badge>}
+        </span>
+      )}
+      <div className="ml-auto flex items-center gap-3">
+        {mode === 'performance' && perfScale?.any && (
+          <span className="flex items-center gap-1.5 text-[11px] text-slate-500 tabular">
+            {fmtMinutes(perfScale.min)}
+            <span className="h-2 w-20 rounded-full" style={{ background: `linear-gradient(90deg, ${heatColor(0)}, ${heatColor(0.5)}, ${heatColor(1)})` }} />
+            {fmtMinutes(perfScale.max)}
+          </span>
+        )}
+        <span className="hidden items-center gap-1 text-[11px] text-slate-500 2xl:flex">
+          <span className="inline-block h-[3px] w-5 rounded bg-slate-500" /> width = frequency
+        </span>
+        <Segmented<'TB' | 'LR'>
+          size="sm"
+          ariaLabel="Layout direction"
+          value={rankdir}
+          onChange={setRankdir}
+          options={[{ id: 'TB', label: '↓', title: 'Top to bottom' }, { id: 'LR', label: '→', title: 'Left to right' }]}
+        />
+        <Button size="sm" variant="ghost" icon={fullscreen ? 'minimize' : 'maximize'} onClick={() => setFullscreen((v) => !v)} aria-label={fullscreen ? 'Exit full screen' : 'Full screen'}>
+          {fullscreen ? 'Exit' : ''}
+        </Button>
+      </div>
+    </div>
+  );
+
+  const canvas = (() => {
+    const result = mode === 'handover' ? resources : dfg;
+    if (!result || result.status !== 'ok') return <div className="p-4"><EngineGate result={result}>{() => null}</EngineGate></div>;
+    if (mode === 'handover' && ra && !ra.resources.length) {
+      return (
+        <CanvasEmpty title="No resource information in this log" icon="users">
+          Hand-over analysis needs a resource column (who performed each step). Map a resource column in Overview & Data, or use a log that records performers.
+        </CanvasEmpty>
+      );
+    }
+    if (mode !== 'handover' && dfgData && !dfgData.nodes.length) {
+      return <CanvasEmpty title="No recorded steps to draw" icon="graph">The selected cases have no complete or point events.</CanvasEmpty>;
+    }
+    if (mode === 'performance' && perfScale && !perfScale.any) {
+      return (
+        <>
+          <Notice tone="info" className="m-3 mb-0">
+            {perfMetric === 'matched_gap'
+              ? 'No “wait before next start” values: this measure needs start and complete events. Switch to “Time between steps”.'
+              : 'No transition has two consecutive recorded steps in this scope.'}
+          </Notice>
+          {graph && <FlowGraph nodes={graph.nodes} edges={graph.edges} selection={selection} onSelect={onSelect} height="100%" rankdir={rankdir} fitKey={`${fullscreen}`} />}
+        </>
+      );
+    }
+    return graph ? <FlowGraph nodes={graph.nodes} edges={graph.edges} selection={selection} onSelect={onSelect} height="100%" rankdir={rankdir} fitKey={`${fullscreen}`} /> : null;
+  })();
+
+  return (
+    <div className="flex min-h-[calc(100vh-76px)] flex-col gap-3 xl:h-[calc(100vh-76px)]">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-1">
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-brand-600">1 · Analysis</div>
+          <h1 className="text-lg font-semibold leading-tight text-slate-900">Process Explorer</h1>
+        </div>
+        <div className="flex max-w-full gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1" role="tablist" aria-label="Analysis mode">
+          {MODES.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              role="tab"
+              aria-selected={mode === m.id}
+              onClick={() => changeMode(m.id)}
+              className={cx(
+                'inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition',
+                mode === m.id ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100',
+              )}
+            >
+              <Icon name={m.icon} className="h-4 w-4" />
+              {m.label}
+            </button>
+          ))}
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="primary" iconRight="arrowRight" onClick={() => navigate('design')}>
+            Design an improvement
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <section
+          className={cx(
+            'flex min-h-[520px] min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white',
+            fullscreen && 'fixed inset-0 z-[55] m-0 rounded-none border-0',
+          )}
+          aria-label="Process graph"
+        >
+          {toolbar}
+          <div className="flex min-h-0 flex-1">
+            {mode === 'variants' && vs && (
+              <VariantList variants={vs} selected={variantId} onSelect={(id) => { setVariantId(id); setInspector({ kind: 'none' }); setSelection(null); }} />
+            )}
+            <div className="relative min-h-[440px] min-w-0 flex-1 bg-slate-50/40">
+              {canvas}
+              <div className="pointer-events-none absolute bottom-6 right-3 max-w-xs rounded-lg bg-white/90 px-2.5 py-1.5 text-[11.5px] leading-snug text-slate-600 shadow-sm ring-1 ring-slate-200">
+                <b className="font-semibold text-slate-800">{modeMeta.label}.</b> {modeMeta.help}
+              </div>
+            </div>
+          </div>
+          {mode === 'replay' && <ReplayBar variants={vs ?? []} onFrame={setReplayFrame} />}
+        </section>
+
+        <aside className="pp-scroll min-h-0 overflow-auto rounded-xl border border-slate-200 bg-white p-4" aria-label="Inspector">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Inspector</div>
+            {(selection || inspector.kind !== 'none') && (
+              <button type="button" className="text-xs text-slate-500 hover:text-slate-800" onClick={() => { setSelection(null); setInspector({ kind: 'none' }); }}>
+                Clear
+              </button>
+            )}
+          </div>
+          {inspectorBody}
+        </aside>
+      </div>
     </div>
   );
 }
 
-/* ------------------------------ DFG ------------------------------ */
-
-const START = '__start__';
-const END = '__end__';
-const nodeId = (activity: string) => `a:${activity}`;
-const edgeId = (from: string, to: string) => `e:${JSON.stringify([from, to])}`;
-
-function dfgGraph(dfg: DFG): { nodes: GraphNodeSpec[]; edges: GraphEdgeSpec[] } {
-  const nodes: GraphNodeSpec[] = [
-    { id: START, label: 'Start', kind: 'start' },
-    ...dfg.nodes.map((n) => ({
-      id: nodeId(n.activity),
-      label: n.activity,
-      kind: 'activity' as const,
-      primary: n.count.toLocaleString('en-US'),
-      secondary: plural(n.caseKeys.length, 'case'),
-    })),
-    { id: END, label: 'End', kind: 'end' },
-  ];
-  const edges: GraphEdgeSpec[] = [
-    ...Object.entries(dfg.starts).map(([a, c]) => ({ id: `s:${a}`, source: START, target: nodeId(a), count: c, terminal: true })),
-    ...dfg.edges.map((e) => ({ id: edgeId(e.from, e.to), source: nodeId(e.from), target: nodeId(e.to), count: e.count })),
-    ...Object.entries(dfg.ends).map(([a, c]) => ({ id: `t:${a}`, source: nodeId(a), target: END, count: c, terminal: true })),
-  ];
-  return { nodes, edges };
-}
-
-function ProcessMap() {
-  const { dfg, performance } = useAnalysis();
-  const [selection, setSelection] = useState<GraphSelection>(null);
-  const onSelect = useCallback((s: GraphSelection) => setSelection(s), []);
-  const graph = useMemo(() => (dfg?.status === 'ok' ? dfgGraph(dfg.data) : null), [dfg]);
-
+function CanvasEmpty({ title, icon, children }: { title: string; icon: IconName; children: ReactNode }) {
   return (
-    <EngineGate result={dfg}>
-      {(d) =>
-        d.nodes.length === 0 ? (
-          <EmptyState title="No discovery events">The selected cases have no complete or point events, so there is nothing to draw.</EmptyState>
-        ) : (
-          <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
-            <Card
-              title="Directly-follows graph"
-              subtitle="Nodes: activity instances (complete/point events). Edges: adjacent transitions within a case. Concurrency is approximated by order."
-              bodyClassName="p-3"
-            >
-              <FlowGraph nodes={graph!.nodes} edges={graph!.edges} selection={selection} onSelect={onSelect} height={560} />
-              <div className="mt-2">
-                <GraphLegend pairs />
-              </div>
-            </Card>
-            <DfgInspector dfg={d} selection={selection} gaps={performance?.status === 'ok' ? performance.data.gaps : null} />
-          </div>
-        )
-      }
-    </EngineGate>
+    <div className="grid h-full place-items-center p-6">
+      <div className="max-w-sm text-center">
+        <div className="mx-auto mb-2 grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-400"><Icon name={icon} className="h-5 w-5" /></div>
+        <div className="text-sm font-semibold text-slate-800">{title}</div>
+        <p className="mt-1 text-[13px] leading-relaxed text-slate-500">{children}</p>
+      </div>
+    </div>
   );
 }
 
-function DfgInspector({ dfg, selection, gaps }: { dfg: DFG; selection: GraphSelection; gaps: GapSummary[] | null }) {
-  if (!selection) {
-    return (
-      <Card title="Inspector">
-        <KeyValue
-          items={[
-            ['Activities', dfg.nodes.length],
-            ['Transitions', dfg.edges.length],
-            ['Self-loops', dfg.edges.filter((e) => e.from === e.to).length],
-            ['Start activities', Object.keys(dfg.starts).length],
-            ['End activities', Object.keys(dfg.ends).length],
-          ]}
-        />
-        <p className="mt-3 text-xs text-slate-500">Select a node or an edge (or its count label) to inspect contributing cases.</p>
-      </Card>
-    );
-  }
+/* ------------------------------ Default inspector ------------------------------ */
+
+function DefaultInspector({
+  mode,
+  findings,
+  onShow,
+  onDesign,
+  linked,
+  dfg,
+  ra,
+}: {
+  mode: AnalysisMode;
+  findings: Finding[];
+  onShow: (f: Finding) => void;
+  onDesign: (f: Finding) => void;
+  linked: (id: string) => number;
+  dfg: DFG | null;
+  ra: ResourceAnalysis | null;
+}) {
+  const { findings: fr } = useAnalysis();
+  return (
+    <div className="space-y-4">
+      {dfg && mode !== 'handover' && (
+        <div className="grid grid-cols-3 gap-3 rounded-lg bg-slate-50 px-3 py-2.5">
+          <Metric label="Activities" value={dfg.nodes.length} />
+          <Metric label="Transitions" value={dfg.edges.length} />
+          <Metric label="Self-loops" value={dfg.edges.filter((e) => e.from === e.to).length} />
+        </div>
+      )}
+      {ra && mode === 'handover' && (
+        <div className="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 px-3 py-2.5">
+          <Metric label="Resources" value={ra.resources.length} />
+          <Metric label="Hand-overs" value={ra.handoffs.reduce((s, h) => s + h.count, 0)} sub={plural(ra.handoffs.length, 'direction pair')} />
+          <Metric label="Steps with a resource" value={fmtPct(ra.knownInstances, ra.totalInstances)} sub={`${ra.knownInstances} of ${ra.totalInstances}`} />
+          <Metric label="Rows with a resource" value={fmtPct(ra.knownRawEvents, ra.totalRawEvents)} sub={`${ra.knownRawEvents} of ${ra.totalRawEvents}`} />
+        </div>
+      )}
+      <p className="text-[12.5px] leading-relaxed text-slate-500">
+        Click any box, arrow or number on the map to see its measures and the actual cases behind it.
+      </p>
+      <div>
+        <SectionLabel right={<InfoTip>Findings come from deterministic rules in the engine. They point to where to look; they are not proven causes or guaranteed savings.</InfoTip>}>
+          Findings ({findings.length})
+        </SectionLabel>
+        <EngineGate result={fr}>
+          {() =>
+            findings.length ? (
+              <div className="space-y-2">
+                {findings.map((f) => (
+                  <FindingCard key={f.id} f={f} active={false} onShow={() => onShow(f)} onDesign={() => onDesign(f)} linkedDesigns={linked(f.id)} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-[13px] text-slate-500">No rule flagged anything in this scope.</p>
+            )
+          }
+        </EngineGate>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------ DFG inspector ------------------------------ */
+
+function DfgInspector({
+  dfg,
+  selection,
+  gaps,
+  coverage,
+  onSelect,
+  onPick,
+  repeat,
+}: {
+  dfg: DFG;
+  selection: NonNullable<GraphSelection>;
+  gaps: GapSummary[] | null;
+  coverage?: { from: string; to: string; transitionCount: number; matchedGapCount: number; overlapCount: number }[];
+  onSelect: (s: GraphSelection) => void;
+  onPick: (k: string) => void;
+  repeat?: { activity: string; extraOccurrenceCount: number; repeatedCaseKeys: string[]; occurrenceCount: number }[];
+}) {
   const { id } = selection;
   if (id === START || id === END) {
     const rec = id === START ? dfg.starts : dfg.ends;
+    const cases = id === START ? dfg.startCases : dfg.endCases;
     return (
-      <Card title={id === START ? 'Start activities' : 'End activities'}>
-        <Table>
-          <tbody>
-            {Object.entries(rec).map(([a, c]) => (
-              <tr key={a}><Td>{a}</Td><Td align="right">{c}</Td></tr>
-            ))}
-          </tbody>
-        </Table>
-      </Card>
+      <div className="space-y-3">
+        <Title kicker={id === START ? 'Where cases begin' : 'Where cases end'} title={id === START ? 'Start' : 'End'} />
+        <ul className="space-y-1">
+          {Object.entries(rec).sort((a, b) => b[1] - a[1]).map(([act, c]) => (
+            <li key={act}>
+              <button type="button" className="flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-[13px] hover:bg-slate-50" onClick={() => onSelect({ type: 'edge', id: id === START ? startEdgeId(act) : endEdgeId(act) })}>
+                <span>{act}</span>
+                <span className="tabular text-slate-500">{plural(c, 'case')}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+        {!cases && <p className="text-xs text-slate-500">Case lists for start/end are not provided by this engine build.</p>}
+      </div>
     );
   }
   if (id.startsWith('s:') || id.startsWith('t:')) {
     const activity = id.slice(2);
     const isStart = id.startsWith('s:');
+    const count = (isStart ? dfg.starts : dfg.ends)[activity] ?? 0;
+    const cases = (isStart ? dfg.startCases : dfg.endCases)?.[activity];
     return (
-      <Card title={isStart ? `Start → ${activity}` : `${activity} → End`}>
-        <KeyValue items={[['Cases', (isStart ? dfg.starts : dfg.ends)[activity] ?? 0]]} />
-        <p className="mt-2 text-xs text-slate-500">The engine reports start/end counts without case keys. Select the activity node for its contributing cases.</p>
-      </Card>
+      <div className="space-y-3">
+        <Title kicker={isStart ? 'Cases start with' : 'Cases end with'} title={activity} />
+        <Metric label="Cases" value={count} />
+        {cases ? <CaseList caseKeys={cases} onPick={onPick} /> : <p className="text-xs text-slate-500">Case list for start/end is not available in this engine build. Select the activity box to see all of its cases.</p>}
+      </div>
     );
   }
   if (id.startsWith('a:')) {
     const activity = id.slice(2);
     const node = dfg.nodes.find((n) => n.activity === activity);
     if (!node) return null;
-    const service = gaps?.find((g) => g.metricType === 'service' && g.from === activity);
+    const service = serviceFor(gaps, activity);
+    const rep = repeat?.find((r) => r.activity === activity);
+    const out = dfg.edges.filter((e) => e.from === activity).sort((x, y) => y.count - x.count);
+    const inc = dfg.edges.filter((e) => e.to === activity).sort((x, y) => y.count - x.count);
     return (
-      <Card title={activity} subtitle="Activity">
-        <KeyValue
-          items={[
-            ['Instances', node.count],
-            ['Cases', node.caseKeys.length],
-            ['Starts here', dfg.starts[activity] ?? 0],
-            ['Ends here', dfg.ends[activity] ?? 0],
-            ['Mean service', service ? `${fmtMinutes(service.meanMin)} (n=${service.n})` : 'N/A (no matched lifecycle pairs)'],
-          ]}
-        />
-        <div className="mt-3 text-xs font-semibold text-slate-500">Outgoing</div>
-        <ul className="mt-1 text-sm">
-          {dfg.edges.filter((e) => e.from === activity).map((e) => (
-            <li key={e.to} className="flex justify-between"><span>→ {e.to}</span><span className="tabular text-slate-500">{e.count}</span></li>
-          ))}
-        </ul>
-        <div className="mt-4">
-          <CaseKeyList caseKeys={node.caseKeys} />
+      <div className="space-y-4">
+        <Title kicker="Activity" title={activity} />
+        <div className="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 px-3 py-2.5">
+          <Metric label="Times recorded" value={node.count} />
+          <Metric label="Cases" value={node.caseKeys.length} />
+          <Metric label="Starts here" value={dfg.starts[activity] ?? 0} />
+          <Metric label="Ends here" value={dfg.ends[activity] ?? 0} />
+          <Metric
+            label="Average service time"
+            value={service ? fmtMinutes(service.meanMin) : 'N/A'}
+            sub={service ? `n = ${service.n} matched start/complete` : 'needs start + complete events'}
+          />
+          {rep ? <Metric label="Extra repeats" value={rep.extraOccurrenceCount} sub={plural(rep.repeatedCaseKeys.length, 'case')} /> : <div />}
         </div>
-      </Card>
+        <EdgeList title="Next steps" edges={out} dir="to" onSelect={(f, t) => onSelect({ type: 'edge', id: edgeId(f, t) })} />
+        <EdgeList title="Previous steps" edges={inc} dir="from" onSelect={(f, t) => onSelect({ type: 'edge', id: edgeId(f, t) })} />
+        <CaseList caseKeys={node.caseKeys} onPick={onPick} />
+      </div>
     );
   }
-  const [from, to] = JSON.parse(id.slice(2)) as [string, string];
+  const pair = parseEdgeId(id);
+  if (!pair) return null;
+  const [from, to] = pair;
   const edge = dfg.edges.find((e) => e.from === from && e.to === to);
   if (!edge) return null;
-  const related = gaps?.filter((g) => g.from === from && g.to === to) ?? [];
-  return (
-    <Card title={`${from} → ${to}`} subtitle={from === to ? 'Self-loop' : 'Transition'}>
-      <KeyValue items={[['Occurrences', edge.count], ['Cases', edge.caseKeys.length]]} />
-      <div className="mt-3 text-xs font-semibold text-slate-500">Measured gaps (from getPerformance)</div>
-      {related.length ? (
-        <ul className="mt-1 space-y-0.5 text-sm">
-          {related.map((g) => (
-            <li key={g.metricType} className="flex justify-between">
-              <MetricTypeBadge type={g.metricType} />
-              <span className="tabular">{fmtMinutes(g.meanMin)} · n={g.n}</span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <div className="mt-1 text-sm text-slate-500">N/A</div>
-      )}
-      <div className="mt-4">
-        <CaseKeyList caseKeys={edge.caseKeys} />
-      </div>
-    </Card>
-  );
-}
-
-/* ------------------------------ Variants ------------------------------ */
-
-function Variants() {
-  const { variants } = useAnalysis();
-  const [sort, setSort] = useState<'count' | 'elapsed' | 'length'>('count');
-  const [selected, setSelected] = useState<string | null>(null);
-  return (
-    <EngineGate result={variants}>
-      {(vs) => {
-        if (!vs.length) return <EmptyState title="No variants">No case in scope has a nonempty discovery sequence.</EmptyState>;
-        const sorted = [...vs].sort((a, b) =>
-          sort === 'count' ? b.count - a.count : sort === 'elapsed' ? b.avgElapsedMin - a.avgElapsedMin : b.activities.length - a.activities.length,
-        );
-        const sel = vs.find((v) => v.id === selected) ?? null;
-        const chart = [...vs].sort((a, b) => b.count - a.count).slice(0, 12).map((v, i) => ({ name: `V${i + 1}`, id: v.id, share: v.share * 100, count: v.count }));
-        return (
-          <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
-            <Card
-              title="Exact variants"
-              subtitle="Identical ordered activity sequences. Share is over cases with a nonempty sequence."
-              actions={
-                <div className="flex items-center gap-1 text-xs">
-                  <span className="text-slate-400">Sort</span>
-                  {(['count', 'elapsed', 'length'] as const).map((s) => (
-                    <Button key={s} size="sm" variant={sort === s ? 'primary' : 'secondary'} onClick={() => setSort(s)}>{s}</Button>
-                  ))}
-                </div>
-              }
-            >
-              <Table className="max-h-[560px]">
-                <thead>
-                  <tr>
-                    <Th align="right">Cases</Th>
-                    <Th align="right">Share</Th>
-                    <Th align="right">Mean elapsed</Th>
-                    <Th align="right">Length</Th>
-                    <Th>Sequence</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sorted.map((v) => (
-                    <tr key={v.id} onClick={() => setSelected(v.id)} className={cx('cursor-pointer hover:bg-slate-50', selected === v.id && 'bg-brand-50')}>
-                      <Td align="right">{v.count}</Td>
-                      <Td align="right">{fmtShare(v.share)}</Td>
-                      <Td align="right">{fmtMinutes(v.avgElapsedMin)}</Td>
-                      <Td align="right">{v.activities.length}</Td>
-                      <Td><SequenceChips activities={v.activities} /></Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </Card>
-            <div className="space-y-4">
-              <Card title="Top variants by share">
-                <div className="h-56">
-                  <ResponsiveContainer>
-                    <BarChart data={chart} margin={{ left: -16, right: 8, top: 4 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} unit="%" />
-                      <Tooltip formatter={(v) => `${fmtNumber(Number(v), 1)}%`} />
-                      <Bar dataKey="share" radius={[3, 3, 0, 0]} onClick={(d) => setSelected((d as unknown as { id: string }).id)}>
-                        {chart.map((c) => <Cell key={c.id} fill={c.id === selected ? '#4338ca' : '#818cf8'} cursor="pointer" />)}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
-              {sel ? <VariantDetail v={sel} /> : <Card title="Variant detail"><p className="text-sm text-slate-500">Select a variant to list its cases.</p></Card>}
-            </div>
-          </div>
-        );
-      }}
-    </EngineGate>
-  );
-}
-
-function SequenceChips({ activities }: { activities: string[] }) {
-  return (
-    <div className="flex flex-wrap items-center gap-0.5 text-xs">
-      {activities.map((a, i) => (
-        <span key={i} className="inline-flex items-center gap-0.5">
-          {i > 0 && <span className="text-slate-300">›</span>}
-          <span className="rounded bg-slate-100 px-1 py-0.5 text-slate-700">{a}</span>
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function VariantDetail({ v }: { v: Variant }) {
-  return (
-    <Card title="Variant detail" subtitle={`${v.count} cases · ${fmtShare(v.share)} · mean ${fmtMinutes(v.avgElapsedMin)}`}>
-      <SequenceChips activities={v.activities} />
-      <div className="mt-3">
-        <CaseKeyList caseKeys={v.caseKeys} />
-      </div>
-    </Card>
-  );
-}
-
-/* ------------------------------ Performance ------------------------------ */
-
-const METRIC_TYPE_COPY: Record<GapSummary['metricType'], { label: string; help: string }> = {
-  inter_event: { label: 'Inter-event gap', help: 'Time between consecutive discovery events. Not necessarily waiting time.' },
-  matched_gap: { label: 'Matched transition gap', help: 'Next valid paired start minus preceding completion. Overlaps are excluded and counted separately.' },
-  service: { label: 'Service time', help: 'Matched complete − start of the same activity instance. Point events never get a duration.' },
-};
-
-export function MetricTypeBadge({ type }: { type: GapSummary['metricType'] }) {
-  return <Badge tone={type === 'service' ? 'green' : type === 'matched_gap' ? 'violet' : 'blue'}>{METRIC_TYPE_COPY[type].label}</Badge>;
-}
-
-function Performance() {
-  const { performance, durations } = useAnalysis();
-  const [type, setType] = useState<GapSummary['metricType']>('inter_event');
-  const [selected, setSelected] = useState<GapSummary | null>(null);
+  const ie = gapFor(gaps, 'inter_event', from, to);
+  const mg = gapFor(gaps, 'matched_gap', from, to);
+  const cov = coverage?.find((c) => c.from === from && c.to === to);
   return (
     <div className="space-y-4">
-      <EngineGate result={performance}>
-        {(p) => {
-          const rows = p.gaps.filter((g) => g.metricType === type).sort((a, b) => b.meanMin - a.meanMin);
-          return (
-            <>
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                <Stat label="Matched lifecycle pairs" value={p.matchedPairs} />
-                <Stat label="Ambiguous pairs (skipped)" value={p.ambiguousPairs} tone={p.ambiguousPairs ? 'bad' : 'default'} sub="No duration assigned" />
-                <Stat label="Overlaps" value={p.overlaps} sub="Excluded from matched gaps" />
-                <Stat label="Summaries" value={p.gaps.length} />
-              </div>
-              <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
-                <Card
-                  title="Bottleneck table"
-                  subtitle={METRIC_TYPE_COPY[type].help}
-                  actions={
-                    <div className="flex gap-1">
-                      {(Object.keys(METRIC_TYPE_COPY) as GapSummary['metricType'][]).map((t) => (
-                        <Button key={t} size="sm" variant={type === t ? 'primary' : 'secondary'} onClick={() => { setType(t); setSelected(null); }}>
-                          {METRIC_TYPE_COPY[t].label}
-                        </Button>
-                      ))}
-                    </div>
-                  }
-                >
-                  {rows.length === 0 ? (
-                    <EmptyState title={`No ${METRIC_TYPE_COPY[type].label.toLowerCase()} measurements`}>
-                      {type === 'inter_event' ? 'No case has two or more discovery events.' : 'This log has no valid matched start/complete pairs for this metric (N/A, not zero).'}
-                    </EmptyState>
-                  ) : (
-                    <Table className="max-h-[480px]">
-                      <thead>
-                        <tr>
-                          <Th>{type === 'service' ? 'Activity' : 'Transition'}</Th>
-                          <Th>Metric type</Th>
-                          <Th align="right">Mean</Th>
-                          <Th align="right">n</Th>
-                          <Th align="right">Cases</Th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rows.map((g, i) => (
-                          <tr key={i} onClick={() => setSelected(g)} className={cx('cursor-pointer hover:bg-slate-50', selected === g && 'bg-brand-50')}>
-                            <Td>{g.to !== undefined ? `${g.from} → ${g.to}` : g.from}</Td>
-                            <Td><MetricTypeBadge type={g.metricType} /></Td>
-                            <Td align="right">{fmtMinutes(g.meanMin)}</Td>
-                            <Td align="right">
-                              {g.n} {g.n < 3 && <Badge tone="amber" title="Fewer than 3 observations">low support</Badge>}
-                            </Td>
-                            <Td align="right">{g.caseKeys.length}</Td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </Table>
-                  )}
-                </Card>
-                <Card title="Contributing cases">
-                  {selected ? (
-                    <>
-                      <div className="mb-2 text-sm font-medium">{selected.to !== undefined ? `${selected.from} → ${selected.to}` : selected.from}</div>
-                      <CaseKeyList caseKeys={selected.caseKeys} />
-                    </>
-                  ) : (
-                    <p className="text-sm text-slate-500">Select a row to list its cases.</p>
-                  )}
-                </Card>
-              </div>
-            </>
-          );
-        }}
-      </EngineGate>
-      <Card title="Case elapsed time distribution" subtitle="First-to-last accepted event per case (calendar time, not working time). Bins are for display only.">
-        <EngineGate result={durations}>{(d) => <DurationHistogram values={d.map((x) => x.elapsedMin)} />}</EngineGate>
-      </Card>
+      <Title kicker={from === to ? 'Repeat (self-loop)' : 'Transition'} title={`${from} → ${to}`} />
+      <div className="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 px-3 py-2.5">
+        <Metric label="Times observed" value={edge.count} />
+        <Metric label="Cases" value={edge.caseKeys.length} />
+      </div>
+      <div>
+        <SectionLabel right={<InfoTip>Three different time measures are kept separate. “Time between steps” uses every occurrence; “wait before next start” needs a completion followed by a recorded start; service time is start→complete of one activity.</InfoTip>}>
+          Timing
+        </SectionLabel>
+        <div className="space-y-2 text-[13px]">
+          <TimingRow label="Time between steps" value={fmtGap(ie)} n={ie?.n} of={cov?.transitionCount ?? edge.count} lowSupport={!!ie && ie.n < 3} />
+          <TimingRow label="Wait before next start" value={fmtGap(mg)} n={mg?.n ?? (cov ? cov.matchedGapCount : undefined)} of={cov?.transitionCount ?? edge.count} lowSupport={!!mg && mg.n < 3} note={cov && cov.overlapCount ? `${cov.overlapCount} overlapping (excluded)` : undefined} />
+          <TimingRow label={`Service of “${from}”`} value={fmtGap(serviceFor(gaps, from))} n={serviceFor(gaps, from)?.n} />
+        </div>
+      </div>
+      <CaseList caseKeys={edge.caseKeys} onPick={onPick} />
     </div>
   );
 }
 
-function DurationHistogram({ values }: { values: number[] }) {
-  const data = useMemo(() => {
-    if (!values.length) return [];
-    const max = Math.max(...values);
-    const bins = Math.min(20, Math.max(1, values.length));
-    const width = max > 0 ? max / bins : 1;
-    const counts = Array.from({ length: bins }, (_, i) => ({ lo: i * width, hi: (i + 1) * width, count: 0 }));
-    for (const v of values) counts[Math.min(bins - 1, Math.floor(v / width))]!.count += 1;
-    return counts.map((c) => ({ ...c, label: fmtMinutes(c.hi) }));
-  }, [values]);
-  if (!values.length) return <EmptyState title="No cases" />;
+function TimingRow({ label, value, n, of, lowSupport, note }: { label: string; value: string; n?: number; of?: number; lowSupport?: boolean; note?: string }) {
   return (
-    <div className="h-60">
-      <ResponsiveContainer>
-        <BarChart data={data} margin={{ left: -16, right: 8, top: 4 }}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-          <XAxis dataKey="label" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
-          <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-          <Tooltip formatter={(v) => [`${v} cases`, 'Count']} labelFormatter={(_, p) => (p?.[0] ? `${fmtMinutes(p[0].payload.lo)} – ${fmtMinutes(p[0].payload.hi)}` : '')} />
-          <Bar dataKey="count" fill="#6366f1" radius={[3, 3, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
+    <div className="rounded-lg border border-slate-200 px-2.5 py-2">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-slate-600">{label}</span>
+        <span className="font-semibold text-slate-900 tabular">{value}</span>
+      </div>
+      <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500 tabular">
+        {n !== undefined ? <span>n = {n}{of !== undefined && ` of ${of}`}</span> : <span>no observations</span>}
+        {n !== undefined && of ? <Meter value={n} max={of} className="w-16" tone="slate" /> : null}
+        {lowSupport && <Badge tone="amber">low support</Badge>}
+        {note && <span>{note}</span>}
+      </div>
     </div>
   );
 }
 
-/* ------------------------------ Resources ------------------------------ */
-
-const rNode = (r: string) => `r:${r}`;
-const hEdge = (from: string, to: string) => `h:${JSON.stringify([from, to])}`;
-
-/**
- * Graph spec from the engine's ResourceAnalysis. `focus` is a DISPLAY filter:
- * it only hides nodes/edges not touching the chosen resources. Counts are the
- * engine's values for the whole analysis scope and are never recomputed.
- */
-export function handoffGraph(ra: ResourceAnalysis, focus?: ReadonlySet<string>) {
-  const connected = new Set(ra.handoffs.flatMap((h) => [h.from, h.to]));
-  const edgesShown = focus?.size ? ra.handoffs.filter((h) => focus.has(h.from) || focus.has(h.to)) : ra.handoffs;
-  const visible = focus?.size ? new Set([...focus, ...edgesShown.flatMap((h) => [h.from, h.to])]) : null;
-  const nodes: GraphNodeSpec[] = ra.resources
-    .filter((r) => !visible || visible.has(r.resource))
-    .map((r) => ({
-      id: rNode(r.resource),
-      label: resourceLabel(r.resource),
-      kind: 'resource',
-      primary: `${r.instances} inst.`,
-      secondary: `${r.rawEvents} raw · ${r.distinctCases} cases`,
-      isolated: !connected.has(r.resource),
-    }));
-  const edges: GraphEdgeSpec[] = edgesShown.map((h) => ({ id: hEdge(h.from, h.to), source: rNode(h.from), target: rNode(h.to), count: h.count }));
-  return { nodes, edges };
+function EdgeList({ title, edges, dir, onSelect }: { title: string; edges: { from: string; to: string; count: number }[]; dir: 'to' | 'from'; onSelect: (f: string, t: string) => void }) {
+  if (!edges.length) return null;
+  const max = Math.max(...edges.map((e) => e.count));
+  return (
+    <div>
+      <SectionLabel>{title}</SectionLabel>
+      <ul className="space-y-0.5">
+        {edges.map((e) => (
+          <li key={`${e.from}>${e.to}`}>
+            <button type="button" onClick={() => onSelect(e.from, e.to)} className="grid w-full grid-cols-[1fr_auto] items-center gap-x-2 rounded-md px-2 py-1 text-left text-[13px] hover:bg-slate-50">
+              <span className="truncate">{dir === 'to' ? `→ ${e.to}` : `${e.from} →`}</span>
+              <span className="tabular text-slate-500">{e.count}</span>
+              <Meter value={e.count} max={max} className="col-span-2" />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
-function ResourceFilter({ all, focus, onChange }: { all: string[]; focus: Set<string>; onChange: (s: Set<string>) => void }) {
+function Title({ kicker, title }: { kicker: string; title: string }) {
+  return (
+    <div>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-brand-600">{kicker}</div>
+      <div className="text-[16px] font-semibold leading-snug text-slate-900">{title}</div>
+    </div>
+  );
+}
+
+/* ------------------------------ Variant inspector ------------------------------ */
+
+function VariantInspector({ v, onPick }: { v: Variant; onPick: (k: string) => void }) {
+  return (
+    <div className="space-y-4">
+      <Title kicker="Variant" title={`${fmtShare(v.share)} of cases`} />
+      <div className="grid grid-cols-3 gap-3 rounded-lg bg-slate-50 px-3 py-2.5">
+        <Metric label="Cases" value={v.count} />
+        <Metric label="Steps" value={v.activities.length} />
+        <Metric label="Avg span" value={fmtMinutes(v.avgElapsedMin)} />
+      </div>
+      <ol className="space-y-1">
+        {v.activities.map((act, i) => (
+          <li key={i} className="flex items-center gap-2 text-[13px]">
+            <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand-50 text-[10.5px] font-semibold text-brand-700 tabular">{i + 1}</span>
+            {act}
+          </li>
+        ))}
+      </ol>
+      <CaseList caseKeys={v.caseKeys} onPick={onPick} />
+    </div>
+  );
+}
+
+/* ------------------------------ Hand-over inspector ------------------------------ */
+
+function HandoverInspector({ ra, selection, onSelect, onPick }: { ra: ResourceAnalysis; selection: GraphSelection; onSelect: (s: GraphSelection) => void; onPick: (k: string) => void }) {
+  const selResource = selection?.type === 'node' ? ra.resources.find((r) => rNode(r.resource) === selection.id) : undefined;
+  const selHandoff = selection?.type === 'edge' ? ra.handoffs.find((h) => hEdge(h.from, h.to) === selection.id) : undefined;
+  if (selResource) {
+    const out = ra.handoffs.filter((h) => h.from === selResource.resource).sort((a, b) => b.count - a.count);
+    const inc = ra.handoffs.filter((h) => h.to === selResource.resource).sort((a, b) => b.count - a.count);
+    return (
+      <div className="space-y-4">
+        <Title kicker={selResource.roles.length ? `Resource · ${selResource.roles.join(', ')}` : 'Resource'} title={resourceLabel(selResource.resource)} />
+        <div className="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 px-3 py-2.5">
+          <Metric label="Steps performed" value={selResource.instances} sub="completed activity instances" />
+          <Metric label="Cases" value={selResource.distinctCases} />
+          <Metric label="Rows recorded" value={selResource.rawEvents} />
+          <Metric label="Measured active time" value={selResource.activeMin === null ? 'N/A' : fmtMinutes(selResource.activeMin)} sub="matched intervals only" />
+        </div>
+        <p className="text-[11.5px] text-slate-500">Utilization and overload need shift/capacity data; they are not inferred from hand-over counts.</p>
+        <div>
+          <SectionLabel>Activity mix</SectionLabel>
+          <ul className="space-y-0.5 text-[13px]">
+            {Object.entries(selResource.activityCounts).sort((a, b) => b[1] - a[1]).map(([act, c]) => (
+              <li key={act} className="flex justify-between"><span className="truncate">{act}</span><span className="tabular text-slate-500">{c}</span></li>
+            ))}
+          </ul>
+        </div>
+        {[['Passes work to', out, 'to'] as const, ['Receives work from', inc, 'from'] as const].map(([title, list, dir]) =>
+          list.length ? (
+            <div key={title}>
+              <SectionLabel>{title}</SectionLabel>
+              <ul className="space-y-0.5">
+                {list.map((h) => (
+                  <li key={`${h.from}>${h.to}`}>
+                    <button type="button" className="flex w-full justify-between rounded-md px-2 py-1 text-left text-[13px] hover:bg-slate-50" onClick={() => onSelect({ type: 'edge', id: hEdge(h.from, h.to) })}>
+                      <span className="truncate">{resourceLabel(dir === 'to' ? h.to : h.from)}</span>
+                      <span className="tabular text-slate-500">{h.count}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null,
+        )}
+        <CaseList caseKeys={selResource.caseKeys} onPick={onPick} />
+      </div>
+    );
+  }
+  if (selHandoff) {
+    const reverse = ra.handoffs.find((h) => h.from === selHandoff.to && h.to === selHandoff.from);
+    return (
+      <div className="space-y-4">
+        <Title kicker="Hand-over" title={`${resourceLabel(selHandoff.from)} → ${resourceLabel(selHandoff.to)}`} />
+        <div className="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 px-3 py-2.5">
+          <Metric label="Hand-overs" value={selHandoff.count} />
+          <Metric label="Opposite direction" value={reverse?.count ?? 0} />
+        </div>
+        <div>
+          <SectionLabel right={<InfoTip>The pair of activities on each side of the hand-over, as recorded. A hand-over is an observed sequence, not proof of communication.</InfoTip>}>Which steps were handed over</SectionLabel>
+          {selHandoff.activityPairs ? (
+            <ul className="space-y-1">
+              {selHandoff.activityPairs.map((p) => (
+                <li key={`${p.from}>${p.to}`} className="rounded-md border border-slate-200 px-2.5 py-1.5 text-[13px]">
+                  <div className="flex justify-between gap-2"><span>{p.from} → {p.to}</span><span className="tabular text-slate-500">{p.count}</span></div>
+                  <div className="text-[11px] text-slate-500">{plural(p.caseKeys.length, 'case')}</div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Unavailable fn="getResourceAnalysis" title="Activity pairs not provided by this engine build">
+              The hand-over count and its cases are shown; the per-activity breakdown arrives with the v0.3 engine (HandoffSummary.activityPairs).
+            </Unavailable>
+          )}
+        </div>
+        <CaseList caseKeys={selHandoff.caseKeys} onPick={onPick} />
+      </div>
+    );
+  }
+  const top = [...ra.handoffs].sort((a, b) => b.count - a.count).slice(0, 8);
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 px-3 py-2.5">
+        <Metric label="Resources" value={ra.resources.length} />
+        <Metric label="Hand-overs" value={ra.handoffs.reduce((s, h) => s + h.count, 0)} />
+        <Metric label="Steps with a resource" value={fmtPct(ra.knownInstances, ra.totalInstances)} sub={`${ra.knownInstances} of ${ra.totalInstances}`} />
+        <Metric label="Rows with a resource" value={fmtPct(ra.knownRawEvents, ra.totalRawEvents)} sub={`${ra.knownRawEvents} of ${ra.totalRawEvents}`} />
+      </div>
+      <p className="text-[12px] leading-relaxed text-slate-500">Counted only when two consecutive steps of a case have two different known resources. Steps without a resource break the chain.</p>
+      {top.length ? (
+        <div>
+          <SectionLabel>Most frequent hand-overs</SectionLabel>
+          <ul className="space-y-0.5">
+            {top.map((h) => (
+              <li key={`${h.from}>${h.to}`}>
+                <button type="button" className="flex w-full justify-between gap-2 rounded-md px-2 py-1 text-left text-[13px] hover:bg-slate-50" onClick={() => onSelect({ type: 'edge', id: hEdge(h.from, h.to) })}>
+                  <span className="truncate">{resourceLabel(h.from)} → {resourceLabel(h.to)}</span>
+                  <span className="tabular text-slate-500">{h.count}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <Notice tone="info" title="No hand-overs in this scope">Consecutive steps share a resource or have a missing one, so no arrow is drawn.</Notice>
+      )}
+    </div>
+  );
+}
+
+function ResourceFocus({ all, focus, onChange }: { all: string[]; focus: Set<string>; onChange: (s: Set<string>) => void }) {
+  const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const shown = all.filter((r) => !q || resourceLabel(r).toLowerCase().includes(q.toLowerCase()));
   const toggle = (r: string) => {
@@ -461,266 +852,56 @@ function ResourceFilter({ all, focus, onChange }: { all: string[]; focus: Set<st
     onChange(next);
   };
   return (
-    <Card
-      title="Resource display filter"
-      subtitle="Display only. The network shows the chosen resources and their direct handoff partners, the handoff table lists handoffs touching them, and the workload table lists the chosen resources. Coverage, KPIs, findings, other pages and exports still use every case in the analysis scope."
-      actions={
-        <>
-          <Input placeholder="Search resource" className="!w-44 !py-1 text-xs" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search resource" />
-          {focus.size > 0 && <Button size="sm" variant="ghost" onClick={() => onChange(new Set())}>Clear ({focus.size})</Button>}
-        </>
-      }
-    >
-      <div className="flex max-h-28 flex-wrap gap-1 overflow-auto" role="group" aria-label="Resource display filter">
-        {shown.map((r) => (
-          <button
-            key={r}
-            type="button"
-            aria-pressed={focus.has(r)}
-            onClick={() => toggle(r)}
-            className={cx('rounded border px-2 py-0.5 text-xs', focus.has(r) ? 'border-sky-500 bg-sky-50 text-sky-800' : 'border-slate-200 text-slate-600 hover:border-slate-300')}
-            title={r}
-          >
-            {resourceLabel(r)}
-          </button>
+    <div className="relative">
+      <Button size="sm" variant={focus.size ? 'subtle' : 'secondary'} icon="users" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+        {focus.size ? `Focus: ${focus.size}` : 'Focus on resources'}
+      </Button>
+      {open && (
+        <div className="absolute left-0 top-9 z-40 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
+          <p className="mb-2 text-xs text-slate-500">Display only: shows the chosen resources and their direct partners. Counts stay the same.</p>
+          <input className="mb-2 w-full rounded-md border border-slate-300 px-2 py-1 text-xs" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search resource" />
+          <div className="pp-scroll flex max-h-48 flex-wrap gap-1 overflow-auto">
+            {shown.map((r) => (
+              <button key={r} type="button" aria-pressed={focus.has(r)} onClick={() => toggle(r)} className={cx('rounded-md border px-2 py-0.5 text-xs', focus.has(r) ? 'border-sky-500 bg-sky-50 text-sky-800' : 'border-slate-200 text-slate-600 hover:border-slate-300')}>
+                {resourceLabel(r)}
+              </button>
+            ))}
+          </div>
+          <div className="mt-2 flex justify-between">
+            <Button size="sm" variant="ghost" disabled={!focus.size} onClick={() => onChange(new Set())}>Clear</Button>
+            <Button size="sm" variant="primary" onClick={() => setOpen(false)}>Done</Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------ Replay inspector ------------------------------ */
+
+function ReplayInspector({ frame, onPick }: { frame: ReplayFrame; onPick: (k: string) => void }) {
+  const c = frame.counts;
+  const rows: [string, number, string][] = [
+    ['Active (between recorded start and complete)', c.active, 'bg-brand-500'],
+    ['At latest recorded step, more to come', c.latest_observation, 'bg-slate-400'],
+    ['Last recorded step (no completion defined/observed)', c.last_observation, 'bg-slate-300'],
+    ['Completed (completion activity observed)', c.completed, 'bg-emerald-500'],
+    ['Not yet started', c.not_yet_observed, 'bg-white ring-1 ring-slate-300'],
+  ];
+  return (
+    <div className="space-y-4">
+      <Title kicker="Replay at cursor" title={`${plural(frame.selectedCases, 'case')} in replay`} />
+      <ul className="space-y-1.5 text-[13px]">
+        {rows.map(([label, n, cls]) => (
+          <li key={label} className="flex items-center gap-2">
+            <span className={cx('h-2.5 w-2.5 shrink-0 rounded-full', cls)} />
+            <span className="flex-1 text-slate-600">{label}</span>
+            <span className="font-semibold tabular">{fmtNumber(n)}</span>
+          </li>
         ))}
-        {!shown.length && <span className="text-xs text-slate-400">No resource matches.</span>}
-      </div>
-    </Card>
-  );
-}
-
-function Resources() {
-  const { resources } = useAnalysis();
-  const [selection, setSelection] = useState<GraphSelection>(null);
-  const [focus, setFocus] = useState<Set<string>>(() => new Set());
-  const onSelect = useCallback((s: GraphSelection) => setSelection(s), []);
-  const graph = useMemo(() => (resources?.status === 'ok' ? handoffGraph(resources.data, focus) : null), [resources, focus]);
-
-  return (
-    <EngineGate result={resources}>
-      {(ra) => {
-        if (!ra.resources.length) {
-          return <EmptyState title="No known resources">No event in scope has a resource value (placeholders count as missing). Workload and handoffs are N/A.</EmptyState>;
-        }
-        const inFocus = (r: string) => !focus.size || focus.has(r);
-        const handoffsShown = focus.size ? ra.handoffs.filter((h) => focus.has(h.from) || focus.has(h.to)) : ra.handoffs;
-        const resourcesShown = ra.resources.filter((r) => inFocus(r.resource));
-        const selResource = selection?.type === 'node' ? ra.resources.find((r) => rNode(r.resource) === selection.id) : undefined;
-        const selHandoff = selection?.type === 'edge' ? ra.handoffs.find((h) => hEdge(h.from, h.to) === selection.id) : undefined;
-        const chart = [...resourcesShown].sort((a, b) => b.instances - a.instances).slice(0, 15).map((r) => ({ ...r, label: resourceLabel(r.resource) }));
-        return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              <Stat label="Known resources (scope)" value={ra.resources.length} />
-              <Stat label="Raw-event coverage" value={fmtPct(ra.knownRawEvents, ra.totalRawEvents)} sub={`${ra.knownRawEvents} of ${ra.totalRawEvents} rows with a known resource`} />
-              <Stat label="Instance coverage" value={fmtPct(ra.knownInstances, ra.totalInstances)} sub={`${ra.knownInstances} of ${ra.totalInstances} discovery instances`} />
-              <Stat label="Directed handoff pairs (scope)" value={ra.handoffs.length} sub={`${ra.handoffs.reduce((s, h) => s + h.count, 0)} handoffs total`} />
-            </div>
-
-            <ResourceFilter all={ra.resources.map((r) => r.resource)} focus={focus} onChange={(f) => { setFocus(f); setSelection(null); }} />
-
-            <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
-              <Card
-                title="Resource handoff network"
-                subtitle="Directed edges count adjacent discovery events within one case handled by two different known resources. WTN-inspired; not KGU WTN and not observed communication."
-                actions={focus.size > 0 ? <Badge tone="blue">display filter: {focus.size} selected</Badge> : undefined}
-                bodyClassName="p-3"
-              >
-                {ra.handoffs.length === 0 && (
-                  <div className="mb-3">
-                    <Notice tone="info" title="No eligible handoffs in this scope">
-                      Adjacent events either share the same resource or have a missing endpoint, so no edge is drawn. Known resources are still shown as isolated nodes.
-                    </Notice>
-                  </div>
-                )}
-                <FlowGraph nodes={graph!.nodes} edges={graph!.edges} selection={selection} onSelect={onSelect} height={440} />
-                <div className="mt-2"><GraphLegend pairs /></div>
-              </Card>
-              <Card title="Inspector">
-                {selResource ? (
-                  <>
-                    <div className="text-base font-semibold" title={selResource.resource}>{resourceLabel(selResource.resource)}</div>
-                    <KeyValue
-                      items={[
-                        ['Roles', selResource.roles.length ? selResource.roles.join(', ') : '—'],
-                        ['Raw events', selResource.rawEvents],
-                        ['Completed instances', selResource.instances],
-                        ['Distinct cases', selResource.distinctCases],
-                        ['Active time', selResource.activeMin === null ? 'N/A' : fmtMinutes(selResource.activeMin)],
-                        ['Utilization', 'Per-resource value not provided (see resource_utilization KPI)'],
-                        ['Outgoing handoffs', ra.handoffs.filter((h) => h.from === selResource.resource).reduce((s, h) => s + h.count, 0)],
-                        ['Incoming handoffs', ra.handoffs.filter((h) => h.to === selResource.resource).reduce((s, h) => s + h.count, 0)],
-                      ]}
-                    />
-                    <div className="mt-3"><CaseKeyList caseKeys={selResource.caseKeys} /></div>
-                  </>
-                ) : selHandoff ? (
-                  <>
-                    <div className="text-base font-semibold">{resourceLabel(selHandoff.from)} → {resourceLabel(selHandoff.to)}</div>
-                    <KeyValue
-                      items={[
-                        ['Handoffs', selHandoff.count],
-                        ['Reverse direction', ra.handoffs.find((h) => h.from === selHandoff.to && h.to === selHandoff.from)?.count ?? 0],
-                      ]}
-                    />
-                    <div className="mt-3"><CaseKeyList caseKeys={selHandoff.caseKeys} /></div>
-                  </>
-                ) : (
-                  <p className="text-sm text-slate-500">Select a resource node or a handoff edge. The tables below use the same engine result.</p>
-                )}
-              </Card>
-            </div>
-
-            <div className="grid gap-4 xl:grid-cols-2">
-              <Card title="Handoff table" subtitle="Same data as the network. Each direction is counted separately.">
-                {handoffsShown.length === 0 ? (
-                  <EmptyState title={ra.handoffs.length ? 'No handoffs touch the selected resources' : 'No handoffs'} />
-                ) : (
-                  <Table className="max-h-96">
-                    <thead><tr><Th>From</Th><Th>To</Th><Th align="right">Count</Th><Th align="right">Cases</Th></tr></thead>
-                    <tbody>
-                      {[...handoffsShown].sort((a, b) => b.count - a.count).map((h) => {
-                        const id = hEdge(h.from, h.to);
-                        return (
-                          <tr key={id} onClick={() => setSelection({ type: 'edge', id })} className={cx('cursor-pointer hover:bg-slate-50', selection?.id === id && 'bg-brand-50')}>
-                            <Td>{resourceLabel(h.from)}</Td><Td>{resourceLabel(h.to)}</Td><Td align="right">{h.count}</Td><Td align="right">{h.caseKeys.length}</Td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </Table>
-                )}
-              </Card>
-              <Card title="Workload by resource" subtitle="Completed instances (start+complete counted once). Utilization needs validated shifts.">
-                <div className="h-64">
-                  <ResponsiveContainer>
-                    <BarChart data={chart} layout="vertical" margin={{ left: 8, right: 16 }}>
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                      <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-                      <YAxis type="category" dataKey="label" width={120} tick={{ fontSize: 11 }} />
-                      <Tooltip />
-                      <Bar dataKey="instances" name="Instances" fill="#0ea5e9" radius={[0, 3, 3, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
-            </div>
-
-            <Card title="Workload table" subtitle={focus.size ? `Showing ${resourcesShown.length} of ${ra.resources.length} resources (display filter)` : undefined}>
-              <Table className="max-h-96">
-                <thead>
-                  <tr>
-                    <Th>Resource</Th><Th>Roles</Th><Th align="right">Raw events</Th><Th align="right">Instances</Th>
-                    <Th align="right">Cases</Th><Th align="right">Active time</Th><Th>Activity mix</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...resourcesShown].sort((a, b) => b.instances - a.instances).map((r) => {
-                    const id = rNode(r.resource);
-                    return (
-                      <tr key={r.resource} onClick={() => setSelection({ type: 'node', id })} className={cx('cursor-pointer hover:bg-slate-50', selection?.id === id && 'bg-brand-50')}>
-                        <Td className="font-medium" >{resourceLabel(r.resource)}</Td>
-                        <Td className="text-xs">{r.roles.join(', ') || '—'}</Td>
-                        <Td align="right">{r.rawEvents}</Td>
-                        <Td align="right">{r.instances}</Td>
-                        <Td align="right">{r.distinctCases}</Td>
-                        <Td align="right">{r.activeMin === null ? 'N/A' : fmtMinutes(r.activeMin)}</Td>
-                        <Td className="text-xs text-slate-600">
-                          {Object.entries(r.activityCounts).sort((a, b) => b[1] - a[1]).map(([a, c]) => `${a} (${c})`).join(', ')}
-                        </Td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </Table>
-            </Card>
-          </div>
-        );
-      }}
-    </EngineGate>
-  );
-}
-
-/* ------------------------------ Findings ------------------------------ */
-
-/** `simulation` is offered only when the Festival gate scenario applies (Festival adapters + audience). */
-export function designFromFinding(f: Finding, simulationAvailable: boolean): DesignRecord {
-  const now = Date.now();
-  return {
-    id: uid('design'),
-    title: f.proposal.length > 90 ? `${f.proposal.slice(0, 87)}…` : f.proposal,
-    findingIds: [f.id],
-    findingText: [f.text],
-    changeNote: '',
-    affectedActivities: f.edge ? [...new Set([f.edge.from, f.edge.to])] : [],
-    targetMetricId: f.metricId,
-    asIsBpmnRef: null,
-    toBeBpmnRef: null,
-    kind: simulationAvailable ? 'simulation' : 'proposal_only',
-    status: 'draft',
-    scope: f.scope,
-    createdAt: now,
-    updatedAt: now,
-  };
-}
-
-function Findings({ navigate }: { navigate: (p: PageId) => void }) {
-  const { findings, scope } = useAnalysis();
-  const { dispatch, state } = useStore();
-  const ws = useWorkspace();
-  return (
-    <EngineGate result={findings}>
-      {(fs) =>
-        fs.length === 0 ? (
-          <EmptyState title="No findings">The engine's deterministic evidence rules found nothing to report for this scope.</EmptyState>
-        ) : (
-          <div className="space-y-3">
-            <Notice tone="info">
-              Findings come from deterministic evidence rules in the engine. They point to where to investigate; they are not confirmed root causes or guaranteed benefits.
-            </Notice>
-            {fs.map((f) => {
-              const linked = ws?.designs.filter((d) => d.findingIds.includes(f.id)) ?? [];
-              return (
-                <Card key={f.id}>
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <code className="font-mono text-xs text-slate-400">{f.id}</code>
-                        <Badge tone="brand">{f.metricId}</Badge>
-                        {f.support === 'low' && <Badge tone="amber">low support (n &lt; 3)</Badge>}
-                        {f.edge && <Badge>{f.edge.from} → {f.edge.to}</Badge>}
-                      </div>
-                      <p className="mt-2 text-sm font-medium text-slate-900">{displayResourceKeys(f.text)}</p>
-                      <p className="mt-1 text-sm text-slate-600"><span className="font-medium text-slate-500">Suggested investigation:</span> {f.proposal}</p>
-                      <div className="mt-2 flex flex-wrap gap-x-4 text-xs text-slate-500 tabular">
-                        <span>Value <b className="text-slate-700">{fmtValue(f.value, f.unit)}</b></span>
-                        <span>n = {f.n}{f.eligible !== undefined && ` of ${f.eligible} eligible`}</span>
-                        <span>{plural(f.caseKeys.length, 'case')}: {f.caseKeys.slice(0, 5).map(caseLabel).join(', ')}{f.caseKeys.length > 5 ? '…' : ''}</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        disabled={!scope}
-                        onClick={() => {
-                          dispatch({ type: 'UPSERT_DESIGN', design: designFromFinding(f, gateScenarioAvailable(state.dataset?.festival, scope!.processKey)) });
-                          dispatch({ type: 'TOAST', tone: 'success', message: 'Design record created from finding.' });
-                          navigate('design');
-                        }}
-                      >
-                        Create design record →
-                      </Button>
-                      {linked.length > 0 && <span className="text-xs text-slate-500">{plural(linked.length, 'linked design')}</span>}
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        )
-      }
-    </EngineGate>
+      </ul>
+      <p className="text-[11.5px] text-slate-500">Exact counts from the engine. A case is placed on its latest recorded activity; no waiting or service time is interpolated.</p>
+      <CaseList caseKeys={frame.cases.map((x) => x.caseKey)} onPick={onPick} label="Cases visible now" />
+    </div>
   );
 }

@@ -172,3 +172,33 @@ export function settingsFromManifest(m: FestivalManifest | undefined): FestivalS
     equipmentDeadline: fc?.equipment_deadline ?? DEFAULT_FESTIVAL_SETTINGS.equipmentDeadline,
   };
 }
+
+/* ----------------------------- Process guide ----------------------------- */
+
+/**
+ * Plain-language description of each Festival process for the Overview chooser.
+ * Summarised from docs/DATA_SCHEMA.md §2 (business/data track). Presentation only.
+ */
+export const FESTIVAL_PROCESS_INFO: Record<string, { caseMeaning: string; purpose: string; actors: string; boundary: string; question: string }> = {
+  stage: {
+    caseMeaning: 'One performance changeover (performance_id)',
+    purpose: 'Get each stage handed over, set up, checked and ready before the scheduled start.',
+    actors: 'Stage crew, audio/technical crew, stage manager',
+    boundary: 'Stage Handover → Performance End',
+    question: 'Where does stage preparation slow down, and who hands work to whom?',
+  },
+  audience: {
+    caseMeaning: 'One entry attempt at a gate (entry_id)',
+    purpose: 'Move visitors from the entry queue through ticket verification into the venue.',
+    actors: 'Gate staff, security, visitors',
+    boundary: 'Join Entry Queue → Entry Complete or rejection',
+    question: 'How long do visitors wait, and what would one more gate change (modeled)?',
+  },
+  equipment: {
+    caseMeaning: 'One equipment request for a performance (equipment_request_id)',
+    purpose: 'Deliver inspected equipment to the stage before it is needed.',
+    actors: 'Equipment crew, technicians, logistics',
+    boundary: 'Equipment Requested → Equipment Ready',
+    question: 'Which requests are late or need substitutes and rework?',
+  },
+};

@@ -2,10 +2,19 @@ import type {
   AnalysisScope,
   ColumnMapping,
   DatasetMetadata,
+  Lifecycle,
   QueueResult,
   RawRow,
   Target,
 } from '../contracts';
+import type {
+  AutomationAssessment,
+  AutomationScore,
+  BenefitResult,
+  BpmnMappingOverride,
+  QueueComparison,
+  QueueExclusionReason,
+} from '../v03-contracts';
 import type { FestivalManifest, FestivalSettings } from '../festival/adapter';
 
 export type PageId =
@@ -16,10 +25,13 @@ export type PageId =
   | 'implementation'
   | 'monitor'
   | 'refine'
+  | 'festival'
   | 'export';
 
 /** Where the event log came from (data provenance). */
-export type SourceKind = 'ui_fixture' | 'festival_sample' | 'user_upload';
+export type SourceKind = 'ui_fixture' | 'bundled_sample' | 'festival_sample' | 'user_upload';
+/** Original file format of the event log (separate from provenance and provider). */
+export type SourceFormat = 'csv' | 'xes';
 /** Who produced the analysis results (hand-authored fixture vs src/engine). */
 export type ProviderKind = 'engine' | 'ui_fixture';
 
@@ -60,6 +72,20 @@ export interface DatasetState {
   /** Validated manifest, present only for the bundled Festival sample. */
   manifest?: FestivalManifest;
   loadedAt: number;
+  /** v0.3: csv when omitted (datasets loaded before XES support). */
+  format?: SourceFormat;
+  /** XES only: original bytes, kept in memory and never persisted. */
+  xesBytes?: Uint8Array;
+}
+
+export type AnalysisMode = 'frequency' | 'performance' | 'variants' | 'rework' | 'handover' | 'patterns' | 'replay';
+
+/** Cross-page request to open Analysis on a specific graph element (UI state only). */
+export interface AnalysisFocus {
+  mode: AnalysisMode;
+  edge?: { from: string; to: string };
+  activity?: string;
+  findingId?: string;
 }
 
 export interface ViewState {
@@ -69,9 +95,15 @@ export interface ViewState {
   dateTo: string;
   selectedCaseKey: string | null;
   throughputBucketMin: number;
+  /** v0.3 UI-only: current Analysis mode and a pending focus request. */
+  analysisMode?: AnalysisMode;
+  analysisFocus?: AnalysisFocus | null;
 }
 
 export type DesignStatus = 'draft' | 'ready' | 'approved' | 'rejected';
+
+/** v0.3 redesign levers (V03_FINAL §3 Design). */
+export type RedesignLever = 'eliminate' | 'simplify' | 'automate' | 'parallelize' | 'reallocate' | 'standardize' | 'reorder';
 
 export interface DesignRecord {
   id: string;
@@ -90,6 +122,14 @@ export interface DesignRecord {
   scope: AnalysisScope;
   createdAt: number;
   updatedAt: number;
+  /* v0.3 additive fields. Absent on records saved before v0.3. */
+  lever?: RedesignLever | null;
+  problem?: string;
+  rationale?: string;
+  assumptions?: string;
+  affectedResources?: string[];
+  /** quantitative: evaluated by a supported model (queue simulation); qualitative: user assessment only. */
+  evaluation?: 'quantitative' | 'qualitative';
 }
 
 export interface ScenarioParams {
@@ -138,7 +178,19 @@ export type PlanSource =
       gateDelta: number;
       staffDelta: number;
     }
-  | { kind: 'proposal_only'; designId: string };
+  | { kind: 'proposal_only'; designId: string }
+  /** v0.3 generic queue scenario (server delta; staffing delta only with an explicit assumption). */
+  | {
+      kind: 'generic_scenario';
+      scenarioId: string;
+      scenarioRevision: number;
+      baselineServers: number;
+      candidateServers: number;
+      serverDelta: number;
+      staffingDelta: number | null;
+    }
+  /** v0.3 automation candidate from Implementation. */
+  | { kind: 'automation'; candidateId: string; activity: string };
 
 export interface PlanRecord {
   id: string;
@@ -153,6 +205,83 @@ export interface PlanRecord {
   state: 'current' | 'archived';
   createdAt: number;
   updatedAt: number;
+}
+
+/** v0.3 generic queue parameters (Refine). */
+export interface GenericQueueParams {
+  arrivalActivity: string;
+  /** '' = complete or point (contract default). */
+  arrivalLifecycle: Lifecycle | '';
+  serviceMode: 'observed' | 'assumed';
+  serviceActivity: string;
+  assumedServiceSec: number | null;
+  baselineServers: number | null;
+  candidateServers: number | null;
+  serviceMultiplier: number;
+  assumeOneWorkerPerServer: boolean;
+}
+
+export interface GenericScenarioRecord {
+  id: string;
+  kind: 'generic_queue';
+  revision: number;
+  designId: string | null;
+  scope: AnalysisScope;
+  provider: ProviderKind;
+  paramsRevision: number;
+  params: GenericQueueParams;
+  inputCount: number;
+  eligibleCases: number;
+  exclusions: { caseKey: string; reason: QueueExclusionReason }[];
+  comparison: QueueComparison;
+  createdAt: number;
+}
+
+/** v0.3 automation candidate: user assessment + engine score/benefit snapshots for one activity. */
+export interface AutomationCandidate {
+  id: string;
+  activity: string;
+  assessment: AutomationAssessment;
+  /** User-rated impact 1–5 for the impact–difficulty matrix. */
+  impact: number | null;
+  benefit: BenefitDraft;
+  scoreSnapshot: AutomationScore | null;
+  benefitSnapshot: BenefitResult | null;
+  designId: string | null;
+  planId: string | null;
+  scope: AnalysisScope;
+  provider: ProviderKind;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Benefit calculator inputs as typed by the user (null = not entered). */
+export interface BenefitDraft {
+  periodLabel: string;
+  currency: string;
+  volume: number | null;
+  eligibleShare: number | null;
+  serviceSource: 'matched' | 'assumed';
+  assumedCurrentSec: number | null;
+  expectedServiceSec: number | null;
+  hourlyCost: number | null;
+  realizationFraction: number | null;
+  independentBenefit: number | null;
+  initialCost: number | null;
+  recurrentCost: number | null;
+}
+
+/** v0.3 To-be BPMN revision reference. XML stays in memory (bpmnDocs) and is never persisted. */
+export interface BpmnRevisionRef {
+  modelId: string;
+  revision: number;
+  /** bpmnDocs key holding this revision's XML for the current session. */
+  docName: string;
+  sourceRef: string | null;
+  designId: string | null;
+  scope: AnalysisScope;
+  createdAt: number;
+  note: string;
 }
 
 /** Describes which scope a workspace belongs to (for the read-only history view). */
@@ -179,6 +308,15 @@ export interface ProcessWorkspace {
   selectedScenarioId: string | null;
   plans: PlanRecord[];
   activePlanId: string | null;
+  /* v0.3 additive state. Absent on workspaces saved before v0.3. */
+  automation?: AutomationCandidate[];
+  genericQueueParams?: GenericQueueParams;
+  genericParamsRevision?: number;
+  genericScenarios?: GenericScenarioRecord[];
+  bpmnRevisions?: BpmnRevisionRef[];
+  bpmnOverrides?: BpmnMappingOverride[];
+  /** Exact activity labels defining a recorded completion (generic throughput). */
+  completionActivities?: string[];
 }
 
 export interface Toast {

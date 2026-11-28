@@ -10,7 +10,7 @@
  * UI-only state — selected case, graph selection, zoom/pan, display filters —
  * never re-runs the engine.
  */
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, type ReactNode } from 'react';
 import type {
   AnalysisScope,
   CaseDuration,
@@ -26,6 +26,7 @@ import type {
   ValidationResult,
   Variant,
 } from '../contracts';
+import type { ActivityEvidenceAnalysis, XesImportResult } from '../v03-contracts';
 import { blocked, callEngine, chain, realEngine, type EngineApi, type EngineResult } from '../adapters/engineAdapter';
 import { uiFixtureEngine } from '../adapters/fixtures/uiFixture';
 import { DEFAULT_FESTIVAL_SETTINGS, festivalKpiConfig, festivalRework } from '../festival/adapter';
@@ -53,8 +54,20 @@ export interface Analysis {
   findings: EngineResult<Finding[]> | null;
   evaluations: EngineResult<TargetEvaluation[]> | null;
   traceByKey: Map<string, Trace>;
+  /** All grouped traces of the dataset (every process). */
+  allTraces: Trace[];
+  /** v0.3 activity/repeat evidence for the selected cases (not_implemented until the engine ships it). */
+  activityEvidence: EngineResult<ActivityEvidenceAnalysis> | null;
+  /** XES only: the raw import result (locations, trace attrs) for the data workspace. */
+  xesImport: EngineResult<XesImportResult> | null;
+  /** Builds the KPI context the provider uses, for another process of the same dataset (Festival overview). */
+  kpiContextFor: (processKey: string, traces: readonly Trace[]) => KPIContext;
 }
 
+/**
+ * Import policy for validateAndNormalize / importXes. v0.3 I-4: dataset analysis always passes
+ * the explicit Festival flag (`festivalValidation: dataset.festival`); generic uploads default false.
+ */
 export function importOptionsFor(dataset: DatasetState): ImportOptions {
   return {
     mapping: dataset.mapping,
@@ -62,7 +75,19 @@ export function importOptionsFor(dataset: DatasetState): ImportOptions {
     fixedOffset: dataset.fixedOffset || undefined,
     acceptExclusions: dataset.acceptExclusions,
     requireProcessType: dataset.requireProcessType,
+    festivalValidation: dataset.festival,
   };
+}
+
+/** Converts an XES import result to the validation shape the rest of the UI consumes. */
+export function xesValidation(result: EngineResult<XesImportResult>): EngineResult<ValidationResult> {
+  if (result.status !== 'ok') return result;
+  const r = result.data;
+  if (r.status === 'rejected') {
+    const first = r.issues[0];
+    return { status: 'error', fn: 'importXes', message: first ? `${first.code}: ${first.message}` : 'The XES document was rejected.' };
+  }
+  return { status: 'ok', fn: 'importXes', data: r.validation };
 }
 
 function localToMs(value: string): number | null {
@@ -97,10 +122,18 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
   const provider = providerFor(dataset);
   const api = provider === 'ui_fixture' ? uiFixtureEngine : realEngine;
 
-  const validation = useMemo(
-    () => (dataset ? callEngine(api, 'validateAndNormalize', dataset.rows, importOptionsFor(dataset)) : null),
-    [api, dataset],
-  );
+  const xesImport = useMemo<EngineResult<XesImportResult> | null>(() => {
+    if (!dataset || dataset.format !== 'xes') return null;
+    if (!dataset.xesBytes) return { status: 'error', fn: 'importXes', message: 'The XES file is no longer in memory. Upload it again.' };
+    const { mapping: _mapping, ...options } = importOptionsFor(dataset);
+    return callEngine(api, 'importXes', dataset.xesBytes, options);
+  }, [api, dataset]);
+
+  const validation = useMemo<EngineResult<ValidationResult> | null>(() => {
+    if (!dataset) return null;
+    if (dataset.format === 'xes') return xesImport ? xesValidation(xesImport) : null;
+    return callEngine(api, 'validateAndNormalize', dataset.rows, importOptionsFor(dataset));
+  }, [api, dataset, xesImport]);
 
   const traces = useMemo<EngineResult<Trace[]> | null>(() => {
     if (!validation) return null;
@@ -159,18 +192,30 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
     [festivalSettings, processKey],
   );
 
+  const kpiContextFor = useCallback(
+    (key: string, scoped: readonly Trace[]): KPIContext => {
+      const first = minFirstEvent(scoped);
+      const bucketMs = throughputBucketMin * 60_000;
+      return {
+        processKey: key,
+        metadata: dataset?.metadata,
+        throughput: { bucketMinutes: throughputBucketMin, anchorMs: first === null ? 0 : Math.floor(first / bucketMs) * bucketMs },
+        ...(festivalConfig ? { festival: festivalConfig } : {}),
+      };
+    },
+    [throughputBucketMin, dataset?.metadata, festivalConfig],
+  );
+
   const kpis = useMemo(() => {
     if (!ready || !processKey) return null;
-    const first = minFirstEvent(selectedTraces);
-    const bucketMs = throughputBucketMin * 60_000;
-    const context: KPIContext = {
-      processKey,
-      metadata: dataset?.metadata,
-      throughput: { bucketMinutes: throughputBucketMin, anchorMs: first === null ? 0 : Math.floor(first / bucketMs) * bucketMs },
-      ...(festivalConfig ? { festival: festivalConfig } : {}),
-    };
-    return callEngine(api, 'getKPIs', selectedTraces, context);
-  }, [api, ready, processKey, selectedTraces, throughputBucketMin, dataset?.metadata, festivalConfig]);
+    return callEngine(api, 'getKPIs', selectedTraces, kpiContextFor(processKey, selectedTraces));
+  }, [api, ready, processKey, selectedTraces, kpiContextFor]);
+
+  // v0.3 activity evidence: one call per selected scope, only when the engine provides it.
+  const activityEvidence = useMemo<EngineResult<ActivityEvidenceAnalysis> | null>(() => {
+    if (!ready) return null;
+    return callEngine(api, 'getActivityEvidence', selectedTraces);
+  }, [api, ready, selectedTraces]);
 
   const targets = workspace?.targets;
 
@@ -198,7 +243,7 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
 
   // Separate memo: a target edit re-evaluates immediately without recomputing metrics.
   const evaluations = useMemo(
-    () => (kpis ? chain(kpis, api, 'evaluateTargets', (metrics) => [metrics, targets ?? []]) : null),
+    () => (kpis ? chain(kpis, api, 'evaluateTargets', (metrics) => [metrics, targets ?? []] as const) : null),
     [api, kpis, targets],
   );
 
@@ -223,8 +268,12 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
       findings,
       evaluations,
       traceByKey,
+      allTraces,
+      activityEvidence,
+      xesImport,
+      kpiContextFor,
     }),
-    [provider, api, validation, traces, processKeys, processTraces, selectedTraces, scope, discovery, kpis, findings, evaluations, traceByKey],
+    [provider, api, validation, traces, processKeys, processTraces, selectedTraces, scope, discovery, kpis, findings, evaluations, traceByKey, allTraces, activityEvidence, xesImport, kpiContextFor],
   );
 
   return <AnalysisContext.Provider value={value}>{children}</AnalysisContext.Provider>;
