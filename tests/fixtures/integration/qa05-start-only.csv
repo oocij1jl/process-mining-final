@@ -1,0 +1,4 @@
+case_id,activity,timestamp,lifecycle,activity_instance_id,resource
+Finished,Work,2026-11-27T00:00:00Z,start,w1,R7
+Finished,Work,2026-11-27T00:05:00Z,complete,w1,R7
+Started,Work,2026-11-27T00:01:00Z,start,w2,R7

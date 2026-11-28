@@ -1,0 +1,138 @@
+PASS  [A01] Non-canonical headers: mapping editor blocks loading until required fields are mapped
+PASS  [A02] Upload starts with Festival adapters OFF
+PASS  [A03] Validation: 11 raw rows, 11 accepted, 0 excluded, 0 errors, 0 warnings, ready
+PASS  [A04] Scope bar: 3 of 3 cases, provider engine, source user-uploaded, no Festival badge
+PASS  [A05] Trace view: 001 (5 rows, 4 discovery, 10 min), 002 (4, 4, 15 min), 003 (2, 2, 2 min) — [["001","01 Jul 2028, 18:00:00 GMT+9","5","4","10 min"],["002","01 Jul 2028, 18:02:00 GMT+9","4","4","15 min"],["003","01 Jul 2028, 18:16:00 GMT+9","2","2","2 min"]]
+PASS  [A06] Raw preview keeps original strings (quoted comma, UTC Z timestamps)
+PASS  [A07] Case drawer for 001 lists all 5 accepted rows incl. Payment Authorized start/complete
+PASS  [A10] DFG renders 5 activities + Start + End and 4 transitions + 1 start edge + 2 end edges — nodes=7 edges=7
+PASS  [A11] Activity frequency: Order Received 3, Payment Authorized 2, Packed, boxed 2, Order Shipped 2, Order Cancelled 1 — {"Order Received":"3","Payment Authorized":"2","Packed, boxed":"2","Order Shipped":"2","Order Cancelled":"1"}
+PASS  [A12] Edge count labels = {3 start, 2,2,2,1 transitions, 2,1 end} — ["3","2","2","2","1","2","1"]
+PASS  [A13] Inspector: 5 activities, 4 transitions, 0 self-loops, 1 start activity, 2 end activities
+PASS  [A14] Node click Order Received → 3 contributing cases (001, 002, 003), starts here 3
+PASS  [A15] Edge click Order Received → Order Cancelled: 1 occurrence, case 003, inter-event gap 2 min (n=1)
+PASS  [A16] Zoom-in changes scale; dragging the pane pans the graph — translate(42.3274px, 225.103px) scale(0.533632) → translate(-31.2072px, 214.324px) scale(0.640359) → translate(-151.207px, 254.324px) scale(0.640359)
+PASS  [A17] DFG: opening and closing a case drawer keeps the viewport — translate(-151.207px, 254.324px) scale(0.640359) vs translate(-151.207px, 254.324px) scale(0.640359)
+PASS  [A20] Variants: [2, 66.7%, 12.5 min, 4] and [1, 33.3%, 2 min, 2] — [["2","66.7%","12.5 min","4"],["1","33.3%","2 min","2"]]
+PASS  [A21] Variant drill-down: Order Received › Order Cancelled → case 003
+PASS  [A22] Performance header: 1 matched pair, 0 ambiguous, 0 overlaps, 5 summaries
+PASS  [A23] Inter-event bottleneck table: Packed→Shipped 5.5, Payment→Packed 4, Received→Payment 3, Received→Cancelled 2 min; all low support — [["Packed, boxed → Order Shipped","Inter-event gap","5.5 min","2 low support","2"],["Payment Authorized → Packed, boxed","Inter-event gap","4 min","2 low support","2"],["Order Received → Payment Authorized","Inter-event gap","3 min","2 low support","2"],["Order Received → Order Cancelled","Inter-event gap","2 min","1 low support","1"]]
+PASS  [A24] Matched transition gap: explicit N/A empty state (point event precedes the only paired start)
+PASS  [A25] Lifecycle service time: Payment Authorized 2 min (n=1) — [["Payment Authorized","Service time","2 min","1 low support","1"]]
+PASS  [A30] Resource stats: 5 known, raw coverage 100% (11 of 11), instance 100% (10 of 10), 4 pairs / 7 handoffs
+PASS  [A31] Handoff graph edge counts equal the handoff table (2,2,2,1) — graph=2,2,2,1 table=2,2,2,1
+PASS  [A32] Handoff table: Customer→Billing 2, Billing→Warehouse 2, Warehouse→Carrier 2, Customer→Support 1
+PASS  [A33] Workload: Customer 3/3/3 N/A, Billing 3/2/2 2 min, Warehouse 2/2/2, Carrier 2/2/2, Support 1/1/1 — {"Customer":["3","3","3","N/A"],"Billing":["3","2","2","2 min"],"Warehouse":["2","2","2","N/A"],"Carrier":["2","2","2","N/A"],"Support":["1","1","1","N/A"]}
+PASS  [A34] Network nodes = 5 known resources; no bidirectional pair in this log
+PASS  [A35] Handoff edge Customer → Support: 1 handoff, reverse 0, case 003
+PASS  [A36] Resource node Billing: 3 raw, 2 instances, 2 cases, active 2 min, outgoing 2, incoming 2
+PASS  [A37] Handoff network: case drawer open/close keeps the viewport
+PASS  [A38] Display filter "Support": network = Support + partner Customer, handoff table 1 row, workload table Support (1 of 5); scope totals unchanged
+PASS  [A40] Findings: largest inter-event gap Packed, boxed → Order Shipped 5.5 min, n = 2, low support, cases 001, 002
+PASS  [A41] Findings: Customer has the most discovered instances (3; coverage 10 of 10); no rework finding (no self-loop)
+PASS  [A42] General log: no Festival KPI / rule / process name / gate simulation leaks in
+PASS  [A43] Monitor (general log): case_elapsed_mean 9 min; utilization N/A with reason; no Festival KPIs
+PASS  [A44] Monitor: no throughput series for a general log (empty state, not zero)
+PASS  [A45] Exact-equality target (max 9 min, measured 9 min) → met (QA-01 in UI)
+PASS  [A46] Target max 8 → breached; measured value unchanged (9 min)
+PASS  [A47] Breach alert links the engine target finding evidence (3 cases)
+PASS  [A48] Breach drill-down lists 001, 002, 003
+PASS  [A49] Target breach appears as a third finding (case_elapsed_mean 9 vs maximum 8)
+PASS  [A50] Design record from the inter-event finding: proposal-only (simulation disabled), affected Packed, boxed + Order Shipped
+PASS  [A51] Generic log has no BPMN: explicit import/empty state, no unrelated sample BPMN
+PASS  [A52] Design saved with target KPI and linked finding
+PASS  [A53] Refine (general log): no quantified simulation offered; recommendations list engine findings
+PASS  [A54] Proposal-only plan created: 3 tasks, provider engine, no quantified effect claimed
+PASS  [A55] Owner / due date / status edits persist in the plan (1 of 3 done)
+PASS  [A56] Plan CSV: owner, due date, status and provider engine — {"plan_id":"plan-mwyv5v6c-9ozv5","plan_revision":"1","plan_state":"current","plan_source":"proposal_only","provider":"engine","scenario_id":"","gate_delta":"","staff_delta":"","dataset_id":"98451024","process":"default","filter":"e761df1e","task":"Investigate: Review the contributing cases for possible handover delays, queues or resource access c…","owner":"Ops lead","staffing":"To be decided","due_date":"2026-12-05","status":"done","evidence":"Packed, boxed → Order Shipped has the largest mean inter-event gap in this selection."}
+PASS  [A57] Plan JSON: provider engine, scope matches dataset/process, design linked
+PASS  [A58] Monitor shows plan progress separately; measured KPI unchanged by plan edits
+PASS  [A60] Evidence JSON identity: provider engine, dataset id = scope bar id, process default, 3 selected cases, no Festival
+PASS  [A61] Evidence JSON: DFG / variants / KPI / findings equal the hand counts shown on screen
+PASS  [A62] Evidence JSON: design and plan records with provider/scope; raw rows excluded
+PASS  [A63] DFG edges CSV = graph (4 rows, counts 2,2,2,1; scope columns)
+PASS  [A64] Variants CSV: shares 2/3 and 1/3 (fraction scale stated), case keys
+PASS  [A65] Performance CSV: 5 summaries incl. service Payment Authorized 2 and inter-event 5.5 (n=2)
+PASS  [A66] Resources CSV: all 5 resources (display filter not exported), Billing active 2 min
+PASS  [A67] Handoffs CSV = handoff table (4 rows, total 7)
+PASS  [A68] KPI CSV: case_elapsed_mean 9 min, target 8 max, breached; utilization N/A
+PASS  [A69] Findings CSV: 3 findings with value/unit/n/eligible/case keys
+PASS  [A70] Validation issues CSV: no issue rows for this clean log
+PASS  [B01] T13: loading another CSV updates every view (1 of 1 case, 4 accepted events)
+PASS  [B02] T03/T17a: R1 raw 1, R2 raw 2; missing endpoint excluded; raw coverage 75% (3 of 4)
+PASS  [B03] T17a: graph shows only R1 → R2 = 1 (no same-resource R2→R2, no missing endpoint edge); table matches
+PASS  [B04] Design records of the previous dataset are not shown as current (history pointer only)
+PASS  [B05] T17b: both directions drawn as separate edges (2 edges, 1 each) and equal the table
+PASS  [B06] T17b: reverse edge of the pair is visually distinguished (dashed) — dashed=1
+PASS  [B07] T17b: edge R1→R2 lists C2, edge R2→R1 lists C1
+PASS  [B08] T13: exports follow the new CSV (DFG A→B = 2; handoffs R2→R1 1, R1→R2 1)
+PASS  [B09] Workspace history lists the Order Processing records as another dataset revision
+PASS  [C01] T05: invalid timestamp blocks analysis until exclusion consent; tie warning shown
+PASS  [C02] T05: after consent 3 accepted events, 2 cases; quoted comma kept as one activity
+PASS  [C03] T05: B→A = 1 (tie keeps source order); no cross-case edge to "Sound, check"
+PASS  [C04] T05: B→A inter-event gap 0 min
+PASS  [C05] T06: same case ID in stage and equipment → two processes
+PASS  [C06] T06: separate graphs (stage Setup/Check; equipment Request/Ready); no cross-process edge
+PASS  [C07] T07: repeated starts without IDs → 3 ambiguous_lifecycle warnings, still analysable
+PASS  [C08] T07: ambiguous pair counted (1), no service duration, completion trace A→B retained
+PASS  [C09] T08: Feb 30 and repeated event ID flagged as errors; analysis blocked
+PASS  [C10] T08: NONE placeholder counted as missing → raw coverage 50% (1 of 2)
+PASS  [C11] T08: utilization N/A without shifts (never 0%)
+PASS  [C12] T15: overlapping R1 intervals union to 15 min (not 20)
+PASS  [C13] T15: resource_utilization N/A, no inflated %
+PASS  [C14] QA-02: "Local Crew" in F1 and F2 stays two resources (10 min, 5 min), readable labels — [["Local Crew · F1","—","2","1","1","10 min","Setup (1)"],["Local Crew · F2","—","2","1","1","5 min","Setup (1)"]]
+PASS  [C15] QA-02: finding text shows the readable label, not the internal key
+PASS  [C16] QA-02: export keeps the internal resource keys unchanged
+PASS  [C17] QA-05: R7 node drill-down = raw-event cases (Finished, Started); instance finding evidence = Finished only
+PASS  [D01] Festival opt-in: badge on, Audience Entry label, 3 timestamp ties, no time-order warning
+PASS  [D02] Observed KPIs: queue wait 26.3 s, entry elapsed 1.52 min, completed 8 / 88.9%, rejected 1 / 11.1%, manual 0% — ["26.3 s","1.52 min","8 cases","88.9%","1 cases","11.1%","0%"]
+PASS  [D03] Throughput with 60-min bucket: 8 cases/bucket
+PASS  [D04] 15-min buckets: mean 2.67 cases/bucket; caption explains recorded zero vs not observed
+PASS  [D05] Throughput buckets [8, 0, 0] over 10:00–10:45 UTC (zero = recorded, not N/A)
+PASS  [D10] Exact-equality target: queue wait 0.4375 min (= 26.25 s) with max 0.4375 → met
+PASS  [D11] Minimum completed-rate target 95% → breached; measured 88.9% unchanged
+PASS  [D12] QA-04 in UI: breach alert links 1 problem case (engine target evidence), not the 8 numerator cases
+PASS  [D13] Breach drill-down lists ENT009 (the non-completed attempt)
+PASS  [D14] KPI card drill-down keeps the 8 completed (numerator) cases, labelled separately
+PASS  [D15] Model target change reflects immediately (0.3 min → breached) without changing the measurement
+PASS  [D20] Audience findings: Join→Verification gap 1.44 min (86.25 s), Gate1 · TEST-ONLY 6 instances (17 of 26), positive queue wait, completed-rate breach
+PASS  [D21] Design from the queue-wait finding: simulation-linked, target KPI audience_queue_wait_mean
+PASS  [D22] To-be BPMN imported, linked and rendered (bpmn-js shapes) — shapes=5
+PASS  [D30] Model: baseline 3 / candidate 4; observed service mode for Ticket Verification
+PASS  [D31] Gate vector: 8 of 9 eligible cases simulated; ENT009 excluded (missing or invalid service)
+PASS  [D32] Excluded list names ENT009 with reason
+PASS  [D33] Scenario 3 → 4: mean 26.3 s → 10 s, p95 1 min → 20 s, max 1 min → 20 s, finish 3.17 → 2.5 min, 151.6 → 192 /h, +1 gate/+1 worker — {"Gates (staffed)":["3","4","+1"],"Qualified gate workers (1 per gate)":["3","4","+1"],"Mean wait":["26.3 s","10 s","−16.3 s"],"p95 wait (nearest rank)":["1 min","20 s","−40 s"],"Max wait":["1 min","20 s","−40 s"],"Finish elapsed from first arrival":["3.17 min","2.5 min","−40 s"],"Throughput":["151.6 /h","192 /h","+40.4"]}
+PASS  [D34] Target check on the design KPI (max 0.3 min): baseline breached → candidate met (modeled, separate from observed)
+PASS  [D35] Observed log KPI panel shows the measured queue wait separately (26.3 s)
+PASS  [D36] T11: plan from scenario rev 1 → "Open 1 staffed entry gate(s): 3 → 4", +1 qualified worker, provider engine
+PASS  [D37] Monitor: plan status (scenario 3→4 gates) separate from measured KPI (still 26.3 s)
+PASS  [D38] T12: candidate 5 → previous result stale, apply disabled
+PASS  [D39] Revision 2 (3 → 5): mean 3.8 s, max 10 s, finish 2.33 min, +2 gates — {"Gates (staffed)":["3","5","+2"],"Qualified gate workers (1 per gate)":["3","5","+2"],"Mean wait":["26.3 s","3.8 s","−22.5 s"],"p95 wait (nearest rank)":["1 min","10 s","−50 s"],"Max wait":["1 min","10 s","−50 s"],"Finish elapsed from first arrival":["3.17 min","2.33 min","−50 s"],"Throughput":["151.6 /h","205.7 /h","+54.1"]}
+PASS  [D40] New plan revision (3 → 5); previous plan archived, not deleted
+PASS  [D41] Re-applying the same scenario keeps the existing plan (2 plans total, 1 current)
+PASS  [D42] Evidence: archived plan keeps its edits; scenarios record params, provider and same input count
+PASS  [D43] Plans CSV: rev 1 archived (+1 gate, owner kept) and rev 2 current (+2 gates), provider engine, audience scope — [["1","archived","1"],["1","archived","1"],["1","archived","1"],["1","archived","1"],["2","current","2"],["2","current","2"],["2","current","2"],["2","current","2"]]
+PASS  [D44] Case filter (first event ≥ 10:00:15Z) → 7 of 9 cases; scenarios of the unfiltered scope not current
+PASS  [D45] Clearing the filter restores the same-scope records
+PASS  [E01] T10: mean wait 8 min, target max 5 → breached
+PASS  [E02] T10: target max 10 → met; measured 8 min unchanged
+PASS  [E03] QA-06 opt-in: adapters off → no audience time-order warning, no audience KPI
+PASS  [E04] QA-06 opt-in: adapters off → only general KPIs
+PASS  [E05] QA-06: adapters on + process_type required + festival_id mapped → 3 audience_event_before_arrival warnings
+PASS  [E06] QA-06: out-of-order evidence excluded from queue wait and outcome KPIs (N/A, n = 0)
+PASS  [E07] QA-07: decimal-second services (0.1/0.2/0.05 s) → exactly zero wait on 1 gate
+PASS  [T01a] T01: edges A→B, B→C, A→C (1 each); start A = 2, end C = 2
+PASS  [T01b] T01: variants ABC and AC, 50% each
+PASS  [T01c] T01: mean case elapsed 25 min
+PASS  [T02a] T02: A = 3, B = 2; self-loop A→A = 1 (case C1); A→B = 2
+PASS  [T02b] T02: repeats retained → 2 variants (A,A,B and A,B)
+PASS  [T04] T04: sequence A→B; service A 5 / B 4 min; matched gap 3 min; inter-event 7 min
+PASS  [T04b] T04: case elapsed 12 min
+PASS  [T09] T09 (UI fixture, engine): 1 gate waits 0,3,6 → mean 3 s, p95 = max 6 s, finish 12 s; 2 gates 0,0,2 → mean 0.7 s, p95 = max 2 s, finish 8 s — {"Gates (staffed)":["1","2"],"Qualified gate workers (1 per gate)":["1","2"],"Mean wait":["3 s","0.7 s"],"p95 wait (nearest rank)":["6 s","2 s"],"Max wait":["6 s","2 s"],"Finish elapsed from first arrival":["12 s","8 s"],"Throughput":["900 /h","1,350 /h"]}
+PASS  [F01] Fixture-provider plan is not shown as a current engine plan for the same dataset scope
+PASS  [F02] Engine-scope target restored after reload (case_elapsed_mean 20); fixture target not mixed in
+PASS  [F03] Workspace history lists the fixture-era scope as "other provider (ui_fixture)", read-only — e1298306::ui_fixture::default::e761df1e
+PASS  [F04] Same dataset + mapping after reload restores its design record and target
+--- summary: 135 PASS, 0 FAIL/ERROR ---
+--- console/log ---
+dialog: Create a new plan revision from scenario rev 2? 1 current plan will be archived (kept for export, not deleted).

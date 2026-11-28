@@ -1,11 +1,55 @@
+import { AnalysisProvider } from './state/analysis';
+import { StoreProvider } from './state/store';
+import type { PageId } from './state/types';
+import { CaseDrawer } from './components/cases';
+import { ScopeBar, Sidebar, Toasts, useHashRoute } from './components/layout';
+import { ErrorBoundary } from './components/ui';
+import { OverviewPage } from './pages/OverviewPage';
+import { AnalysisPage } from './pages/AnalysisPage';
+import { DesignPage } from './pages/DesignPage';
+import { ModelPage } from './pages/ModelPage';
+import { ImplementationPage } from './pages/ImplementationPage';
+import { MonitorPage } from './pages/MonitorPage';
+import { RefinePage } from './pages/RefinePage';
+import { ExportPage } from './pages/ExportPage';
+
+const PAGE_COMPONENTS: Record<PageId, (props: { navigate: (p: PageId) => void }) => React.JSX.Element> = {
+  overview: OverviewPage,
+  analysis: AnalysisPage,
+  design: DesignPage,
+  model: ModelPage,
+  implementation: ImplementationPage,
+  monitor: MonitorPage,
+  refine: RefinePage,
+  export: ExportPage,
+};
+
+function Shell() {
+  const [page, navigate] = useHashRoute();
+  const Page = PAGE_COMPONENTS[page];
+  return (
+    <div className="flex h-full">
+      <Sidebar page={page} navigate={navigate} />
+      <div className="flex min-w-0 flex-1 flex-col overflow-auto">
+        <ScopeBar />
+        <main className="mx-auto w-full max-w-[1500px] flex-1 px-6 py-6">
+          <ErrorBoundary key={page} label={page}>
+            <Page navigate={navigate} />
+          </ErrorBoundary>
+        </main>
+      </div>
+      <CaseDrawer />
+      <Toasts />
+    </div>
+  );
+}
+
 export default function App() {
   return (
-    <main className="grid min-h-screen place-items-center bg-slate-950 p-6 text-slate-50">
-      <section className="w-full max-w-xl rounded-2xl border border-slate-700 bg-slate-900 p-8 sm:p-12">
-        <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">ProcessPilot</h1>
-        <p className="mt-4 text-lg text-slate-300">Music festival operations and resource analysis</p>
-        <p className="mt-8 text-sm text-slate-400">Phase 0 · Analysis features are pending.</p>
-      </section>
-    </main>
+    <StoreProvider>
+      <AnalysisProvider>
+        <Shell />
+      </AnalysisProvider>
+    </StoreProvider>
   );
 }

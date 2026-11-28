@@ -1,0 +1,35 @@
+event_id,process_type,case_id,activity,timestamp,lifecycle,activity_instance_id,resource,festival_id
+G01,audience,ENT001,Join Entry Queue,2026-11-28T10:00:00Z,,,,TEST-ONLY
+G02,audience,ENT001,Ticket Verification,2026-11-28T10:00:00Z,start,TV1,Gate1,TEST-ONLY
+G03,audience,ENT001,Ticket Verification,2026-11-28T10:01:00Z,complete,TV1,Gate1,TEST-ONLY
+G04,audience,ENT001,Entry Complete,2026-11-28T10:01:05Z,,,Gate1,TEST-ONLY
+G05,audience,ENT002,Join Entry Queue,2026-11-28T10:00:10Z,,,,TEST-ONLY
+G06,audience,ENT002,Ticket Verification,2026-11-28T10:00:10Z,start,TV2,Gate2,TEST-ONLY
+G07,audience,ENT002,Ticket Verification,2026-11-28T10:01:10Z,complete,TV2,Gate2,TEST-ONLY
+G08,audience,ENT002,Entry Complete,2026-11-28T10:01:15Z,,,Gate2,TEST-ONLY
+G09,audience,ENT003,Join Entry Queue,2026-11-28T10:00:20Z,,,,TEST-ONLY
+G10,audience,ENT003,Ticket Verification,2026-11-28T10:00:20Z,start,TV3,Gate3,TEST-ONLY
+G11,audience,ENT003,Ticket Verification,2026-11-28T10:01:20Z,complete,TV3,Gate3,TEST-ONLY
+G12,audience,ENT003,Entry Complete,2026-11-28T10:01:25Z,,,Gate3,TEST-ONLY
+G13,audience,ENT004,Join Entry Queue,2026-11-28T10:00:30Z,,,,TEST-ONLY
+G14,audience,ENT004,Ticket Verification,2026-11-28T10:01:00Z,start,TV4,Gate1,TEST-ONLY
+G15,audience,ENT004,Ticket Verification,2026-11-28T10:02:00Z,complete,TV4,Gate1,TEST-ONLY
+G16,audience,ENT004,Entry Complete,2026-11-28T10:02:05Z,,,Gate1,TEST-ONLY
+G17,audience,ENT005,Join Entry Queue,2026-11-28T10:00:40Z,,,,TEST-ONLY
+G18,audience,ENT005,Ticket Verification,2026-11-28T10:01:10Z,start,TV5,Gate2,TEST-ONLY
+G19,audience,ENT005,Ticket Verification,2026-11-28T10:02:10Z,complete,TV5,Gate2,TEST-ONLY
+G20,audience,ENT005,Entry Complete,2026-11-28T10:02:15Z,,,Gate2,TEST-ONLY
+G21,audience,ENT006,Join Entry Queue,2026-11-28T10:00:50Z,,,,TEST-ONLY
+G22,audience,ENT006,Ticket Verification,2026-11-28T10:01:20Z,start,TV6,Gate3,TEST-ONLY
+G23,audience,ENT006,Ticket Verification,2026-11-28T10:02:20Z,complete,TV6,Gate3,TEST-ONLY
+G24,audience,ENT006,Entry Complete,2026-11-28T10:02:25Z,,,Gate3,TEST-ONLY
+G25,audience,ENT007,Join Entry Queue,2026-11-28T10:01:00Z,,,,TEST-ONLY
+G26,audience,ENT007,Ticket Verification,2026-11-28T10:02:00Z,start,TV7,Gate1,TEST-ONLY
+G27,audience,ENT007,Ticket Verification,2026-11-28T10:03:00Z,complete,TV7,Gate1,TEST-ONLY
+G28,audience,ENT007,Entry Complete,2026-11-28T10:03:05Z,,,Gate1,TEST-ONLY
+G29,audience,ENT008,Join Entry Queue,2026-11-28T10:01:10Z,,,,TEST-ONLY
+G30,audience,ENT008,Ticket Verification,2026-11-28T10:02:10Z,start,TV8,Gate2,TEST-ONLY
+G31,audience,ENT008,Ticket Verification,2026-11-28T10:03:10Z,complete,TV8,Gate2,TEST-ONLY
+G32,audience,ENT008,Entry Complete,2026-11-28T10:03:15Z,,,Gate2,TEST-ONLY
+G33,audience,ENT009,Join Entry Queue,2026-11-28T10:31:20Z,,,,TEST-ONLY
+G34,audience,ENT009,Entry Rejected,2026-11-28T10:31:25Z,,,Gate3,TEST-ONLY

@@ -1,0 +1,10 @@
+event_id,process_type,case_id,activity,timestamp,lifecycle,activity_instance_id,resource
+D01,audience,D1,Join Entry Queue,2026-11-27T00:00:00.000Z,,,
+D02,audience,D1,Ticket Verification,2026-11-27T00:00:00.000Z,start,d1,G1
+D03,audience,D1,Ticket Verification,2026-11-27T00:00:00.100Z,complete,d1,G1
+D04,audience,D2,Join Entry Queue,2026-11-27T00:00:00.100Z,,,
+D05,audience,D2,Ticket Verification,2026-11-27T00:00:00.100Z,start,d2,G1
+D06,audience,D2,Ticket Verification,2026-11-27T00:00:00.300Z,complete,d2,G1
+D07,audience,D3,Join Entry Queue,2026-11-27T00:00:00.300Z,,,
+D08,audience,D3,Ticket Verification,2026-11-27T00:00:00.300Z,start,d3,G1
+D09,audience,D3,Ticket Verification,2026-11-27T00:00:00.350Z,complete,d3,G1

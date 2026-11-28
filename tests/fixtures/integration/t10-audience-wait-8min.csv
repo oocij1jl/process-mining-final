@@ -1,0 +1,9 @@
+event_id,process_type,case_id,activity,timestamp,lifecycle,activity_instance_id,resource
+W01,audience,W1,Join Entry Queue,2026-11-27T00:00:00Z,,,
+W02,audience,W1,Ticket Verification,2026-11-27T00:06:00Z,start,v1,G1
+W03,audience,W1,Ticket Verification,2026-11-27T00:07:00Z,complete,v1,G1
+W04,audience,W1,Entry Complete,2026-11-27T00:07:30Z,,,G1
+W05,audience,W2,Join Entry Queue,2026-11-27T00:00:00Z,,,
+W06,audience,W2,Ticket Verification,2026-11-27T00:10:00Z,start,v2,G1
+W07,audience,W2,Ticket Verification,2026-11-27T00:11:00Z,complete,v2,G1
+W08,audience,W2,Entry Complete,2026-11-27T00:11:30Z,,,G1

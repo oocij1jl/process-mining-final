@@ -1,0 +1,33 @@
+PASS  [R-LEGACY] Pre-1.1 records are listed read-only as legacy (not deleted, not current)
+PASS  [R-LEGACY] Legacy v1 storage key is left untouched
+PASS  [R-CSV] Normal CSV: no malformed-row notice
+PASS  [R-CSV] Quoted comma kept in one field and leading zeros preserved in preview
+PASS  [R-GEN] Uploads start with Festival adapters OFF
+PASS  [R-GEN] Festival-only columns are grouped separately and collapsed for general logs
+PASS  [R-CSV] Malformed rows listed with file row and reason (rows 1 TooManyFields, 2 TooFewFields)
+PASS  [R-CSV] Validate & load blocked until explicit consent
+PASS  [R-CSV] Consent enables loading
+PASS  [R-CSV] Dataset card reports file rows, excluded malformed rows and rows sent to validation
+PASS  [R-CSV] Rows sent to the engine keep original file row numbers (0,3) — 0,3
+PASS  [R-CSV] Excluded rows remain listed in an import report card
+PASS  [R-PROV] Uploaded log: source "User-uploaded log", provider "engine"
+PASS  [R-PROV] Uploaded log is analysed by the engine (2 accepted events from rows 0 and 3)
+PASS  [R-PROV] Fixture: source "UI fixture CSV" and provider "engine" shown separately (no hand-authored label)
+PASS  [R-PROV] Plan created from the engine scenario on the fixture CSV is labelled engine (not UI fixture)
+PASS  [R-PROV] Plans CSV carries provider=engine
+PASS  [R-PROV] Evidence JSON records provider, workspace scope and plan provider (engine)
+PASS  [R-PROV] Evidence JSON uses engine metric IDs/units (audience_queue_wait_mean, min)
+PASS  [R-SCOPE] New filter scope starts without targets and offers an explicit copy
+PASS  [R-SCOPE] Plan from the unfiltered scope is not shown as current under the new filter
+PASS  [R-SCOPE] Workspace history lists the unfiltered scope as "other case filter"
+PASS  [R-SCOPE] Explicitly copied target evaluates in the new scope
+PASS  [R-SCOPE] Clearing the filter restores the original scope records
+PASS  [R-BPMN] Design without To-be reference shows "change note only" (not a missing-file state)
+PASS  [R-DISPLAY] Display filter narrows the workload table (1 of 2 resources)
+PASS  [R-DISPLAY] Coverage and scope totals unchanged under display filter
+PASS  [R-DISPLAY] Export still contains all resources (display filter not exported as analysis)
+PASS  [R-GEN] Festival process names not applied when adapters are off
+PASS  [R-GEN] No Festival KPIs (audience_*) without Festival adapters
+PASS  [R-GEN] Gate simulation not offered for a general log
+--- console/log ---
+

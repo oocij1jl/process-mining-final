@@ -1,0 +1,13 @@
+
+> processpilot@0.2.1 test
+> vitest run
+
+
+ RUN  v4.1.12 <repo>
+
+
+ Test Files  9 passed (9)
+      Tests  96 passed (96)
+   Start at  20:02:09
+   Duration  796ms (transform 1.27s, setup 0ms, import 1.85s, tests 150ms, environment 1ms)
+

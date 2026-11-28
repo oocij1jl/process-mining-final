@@ -1,0 +1,12 @@
+order,step,occurred_at,owner,state,instance
+001,Order Received,2028-07-01T09:00:00Z,Customer,,
+001,Payment Authorized,2028-07-01T09:01:00Z,Billing,start,P1
+002,Order Received,2028-07-01T09:02:00Z,Customer,,
+001,Payment Authorized,2028-07-01T09:03:00Z,Billing,complete,P1
+002,Payment Authorized,2028-07-01T09:05:00Z,Billing,,
+001,"Packed, boxed",2028-07-01T09:07:00Z,Warehouse,,
+002,"Packed, boxed",2028-07-01T09:09:00Z,Warehouse,,
+001,Order Shipped,2028-07-01T09:10:00Z,Carrier,,
+003,Order Received,2028-07-01T09:16:00Z,Customer,,
+002,Order Shipped,2028-07-01T09:17:00Z,Carrier,,
+003,Order Cancelled,2028-07-01T09:18:00Z,Support,,

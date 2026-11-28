@@ -1,0 +1,23 @@
+PASS  [Q6] Case drawer opens from DFG drill-down
+PASS  [Q6] Graph zoom/pan preserved after opening a case — before=translate(-123.516px, 216.319px) scale(0.971796) after=translate(-123.516px, 216.319px) scale(0.971796)
+PASS  [Q9] Handoff edge counts equal handoff table counts — graph=1,1 table=1,1
+PASS  [Q12] Evidence JSON labels provider as UI fixture
+PASS  [Q12] Evidence JSON has dataset id, scope, filter, metric definitions
+PASS  [Q12] Evidence DFG equals on-screen fixture DFG (A=3,B=1,C=2; 4 edges)
+PASS  [Q12] Evidence JSON excludes raw rows
+PASS  [Q12] Handoff CSV carries dataset_id/process/filter/provider columns — dataset_id,process,filter,provider,from,to,count,cases,case_keys
+INFO  [Q12] Plans CSV button disabled without plans: true
+PASS  [Q13] BPMN with DI renders shapes in bpmn-js viewer — shapes=5
+PASS  [Q13] BPMN without DI shows an explicit error (not a blank canvas) — shapes=0
+INFO  [Q7] Full page reload performed; dataset cleared from memory: true
+PASS  [Q7] Design record restored after reload for the same dataset
+PASS  [Q13] After reload, missing To-be XML is reported as missing (not "change note only")
+INFO  [Q13] To-be reference kept in restored design record: "to-be-qa.bpmn"
+PASS  [Q10] Empty CSV → explicit "no header row" error
+PASS  [Q10] Non-CSV file → explicit unsupported message
+PASS  [Q10] Ragged CSV lists malformed rows with position and reason
+PASS  [Q10] Ragged CSV cannot be loaded without explicit exclusion consent
+PASS  [Q10] Unmapped required field blocks Validate & load
+PASS  [Q10] Downstream page shows "not ready" state when engine validation is unavailable
+--- console/log ---
+
