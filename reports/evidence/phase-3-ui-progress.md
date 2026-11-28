@@ -71,3 +71,13 @@ Not touched: `src/contracts.ts`, `src/v03-contracts.ts`, `src/engine/**`, tests,
 - Festival manifest path/schema (`public/datasets/dataset_manifest.json`, `bpmn`, `bpmn_to_be`) must match `parseManifest`.
 - Confirm one-click Festival load maps automatically (otherwise the column matcher appears).
 - Production preview: no console errors, no dev-only reload, BPMN chunks lazy-load.
+
+## Resume log (after usage reset)
+
+- Integration state checked: `feat/v03-engine` = `edb9d13` (40 files: `src/engine/**`, `src/v03-contracts.ts` (+`FestivalReadinessLink`, `getFestivalReadinessLinks`), `src/contracts.ts` untouched, tests, docs). It touches **no UI-owned file**. Festival assets (4 BPMN, CSV/XES, `dataset_manifest.json`, `resource_shifts.csv`) are untracked in `~/Desktop/processmining_final`. Neither is in this worktree.
+- A file-level copy into this worktree was blocked by the permission check; the student chose to merge `feat/v03-engine` and add the Festival assets themselves. **Work paused until then.**
+- Model roundtrip (browser, dev): blank To-be → context-pad append task → rename "Check address" → Save new revision → r2 re-imported from its serialized XML with the edit and full DI (2 tasks, shapes 4 of 4); r1 kept. **PASS.** File download/re-upload via OS dialog: NOT TESTED (no file-dialog tool).
+- Added recovery buttons (Copy As-is / Start blank) to the "revision XML not loaded" state.
+- Implementation, Refine, Export: render in the browser with honest "not available in this build" states and Phase 2 data. **PASS (rendering only).**
+- Console: only stale Vite HMR errors from intermediate edits; recheck in production preview.
+- After merge, also switch `FestivalPage` Stage↔Equipment links from the attribute lookup to the engine's `getFestivalReadinessLinks`.
