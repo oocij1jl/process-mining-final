@@ -58,6 +58,7 @@ export const ENGINE_FUNCTIONS: readonly (keyof CoreEngineApi)[] = [
 /** v0.3 optional capabilities, in contract order (V03_CONTRACT §9). */
 export const V03_FUNCTIONS: readonly V03FunctionName[] = [
   'importXes',
+  'getFestivalReadinessLinks',
   'getActivityEvidence',
   'scoreAutomation',
   'estimateBenefit',

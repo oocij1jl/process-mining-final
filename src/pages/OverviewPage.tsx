@@ -269,11 +269,11 @@ function Landing({
         <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-brand-50" />
         <div aria-hidden className="pointer-events-none absolute -bottom-32 right-40 h-64 w-64 rounded-full bg-violet-50/70" />
         <div className="relative grid items-center gap-8 lg:grid-cols-[1.15fr_1fr]">
-          <div>
-            <div className="flex items-center gap-2.5">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2.5">
               <ProcessPilotMark size={36} />
               <span className="text-sm font-semibold text-slate-700">ProcessPilot</span>
-              <Badge tone="brand">Visual Process Intelligence &amp; Optimization</Badge>
+              <Badge tone="brand" className="hidden sm:inline-flex">Visual Process Intelligence &amp; Optimization</Badge>
             </div>
             <h1 className="mt-4 text-[32px] font-semibold leading-[1.15] tracking-tight text-slate-900 md:text-[38px]">
               Discover how work flows.

@@ -266,28 +266,24 @@ export function ReplayBar({ variants, onFrame }: { variants: Variant[]; onFrame:
   }, [frame, onFrame]);
   useEffect(() => () => onFrame(null), [onFrame]);
 
-  const raf = useRef<number | null>(null);
+  // Interval with real elapsed time: keeps advancing even when the tab is throttled (rAF pauses in background tabs).
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => {
     if (!playing || !win) return;
     let last = performance.now();
-    const tick = (now: number) => {
+    timer.current = setInterval(() => {
+      const now = performance.now();
       const dt = (now - last) / 1000;
       last = now;
-      setCursor((c) => {
-        const next = (c ?? win.startMs) + dt * speed * 60_000;
-        if (next >= win.endMs - 1) {
-          setPlaying(false);
-          return win.endMs - 1;
-        }
-        return next;
-      });
-      raf.current = requestAnimationFrame(tick);
-    };
-    raf.current = requestAnimationFrame(tick);
+      setCursor((c) => Math.min((c ?? win.startMs) + dt * speed * 60_000, win.endMs - 1));
+    }, 100);
     return () => {
-      if (raf.current) cancelAnimationFrame(raf.current);
+      if (timer.current) clearInterval(timer.current);
     };
   }, [playing, speed, win]);
+  useEffect(() => {
+    if (playing && win && cursor !== null && cursor >= win.endMs - 1) setPlaying(false);
+  }, [playing, win, cursor]);
 
   if (!available) {
     return (

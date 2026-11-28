@@ -87,8 +87,8 @@ interface EdgeData extends Record<string, unknown> {
 type Pt = { x: number; y: number };
 
 const SIZE: Record<GraphNodeKind, { w: number; h: number }> = {
-  activity: { w: 196, h: 60 },
-  resource: { w: 184, h: 60 },
+  activity: { w: 196, h: 54 },
+  resource: { w: 184, h: 54 },
   start: { w: 64, h: 36 },
   end: { w: 64, h: 36 },
 };
@@ -135,7 +135,7 @@ function PPNode({ data }: NodeProps<Node<NodeData>>) {
   return (
     <div
       className={cx(
-        'relative flex h-[60px] flex-col justify-center rounded-lg border bg-white px-3 shadow-sm transition-opacity',
+        'relative flex h-[54px] flex-col justify-center rounded-lg border bg-white px-3 shadow-sm transition-opacity',
         spec.kind === 'resource' ? 'w-[184px]' : 'w-[196px]',
         spec.isolated ? 'border-dashed border-slate-300' : spec.highlight ? 'border-brand-400' : 'border-slate-300',
         selected && 'ring-2 ring-brand-500 ring-offset-1',
@@ -268,7 +268,7 @@ const edgeTypes = { count: CountEdge };
 
 function layout(nodes: GraphNodeSpec[], edges: GraphEdgeSpec[], rankdir: 'LR' | 'TB') {
   const g = new dagre.graphlib.Graph();
-  g.setGraph(rankdir === 'TB' ? { rankdir, nodesep: 70, ranksep: 64, marginx: 20, marginy: 20 } : { rankdir, nodesep: 48, ranksep: 96, marginx: 20, marginy: 20 });
+  g.setGraph(rankdir === 'TB' ? { rankdir, nodesep: 60, ranksep: 42, marginx: 16, marginy: 16 } : { rankdir, nodesep: 48, ranksep: 96, marginx: 20, marginy: 20 });
   g.setDefaultEdgeLabel(() => ({}));
   for (const n of nodes) g.setNode(n.id, { width: SIZE[n.kind].w, height: SIZE[n.kind].h });
   for (const e of edges) if (e.source !== e.target) g.setEdge(e.source, e.target);
@@ -364,12 +364,34 @@ function FlowGraphInner({ nodes, edges, selection, onSelect, height = 520, rankd
   }, [edges, maxCount, selection, onSelect, routes, rankdir]);
 
   useEffect(() => {
-    const t = setTimeout(() => fitView({ padding: 0.1, duration: 200, maxZoom: 1.1 }), 40);
+    const t = setTimeout(() => fitView({ padding: 0.06, duration: 200, maxZoom: 1.1 }), 40);
     return () => clearTimeout(t);
   }, [structureKey, fitKey, fitView]);
 
+  // Re-fit when the canvas itself changes size (window resize, layout settling on small screens).
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = box.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    let last = { w: el.clientWidth, h: el.clientHeight };
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const ro = new ResizeObserver(() => {
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      if (Math.abs(w - last.w) < 8 && Math.abs(h - last.h) < 8) return;
+      last = { w, h };
+      clearTimeout(t);
+      t = setTimeout(() => fitView({ padding: 0.06, duration: 150, maxZoom: 1.1 }), 120);
+    });
+    ro.observe(el);
+    return () => {
+      clearTimeout(t);
+      ro.disconnect();
+    };
+  }, [fitView]);
+
   return (
-    <div style={{ height }} className="relative">
+    <div ref={box} style={{ height }} className="relative">
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}

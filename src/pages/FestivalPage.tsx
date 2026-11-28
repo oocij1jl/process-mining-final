@@ -7,6 +7,7 @@
 import { useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { Metric, Trace } from '../contracts';
+import type { FestivalReadinessLink } from '../v03-contracts';
 import { callEngine } from '../adapters/engineAdapter';
 import { useAnalysis } from '../state/analysis';
 import { useStore } from '../state/store';
@@ -128,85 +129,141 @@ function Content({ navigate }: { navigate: (p: PageId) => void }) {
   );
 }
 
-const attr = (t: Trace, k: string) => t.events.find((e) => e.attrs[k]?.trim())?.attrs[k]?.trim() ?? null;
+const LINK_STATUS: Record<FestivalReadinessLink['linkStatus'], string> = {
+  linked: 'linked',
+  missing_key: 'no festival/performance ID',
+  missing_stage: 'no matching performance',
+  ambiguous_stage: 'performance ID not unique',
+  stage_scope_unavailable: 'stage cases unavailable',
+};
 
-/** Stage ↔ Equipment evidence by recorded IDs (lookup only; engine KPIs apply their own ambiguity rules). */
+/** Stage ↔ Equipment readiness evidence from the engine (V03_CONTRACT §3B). */
 function LinkExplorer({ stage, equipment }: { stage: Trace[]; equipment: Trace[] }) {
+  const { api, kpiContextFor, traceByKey } = useAnalysis();
   const { dispatch } = useStore();
   const [q, setQ] = useState('');
   const [sel, setSel] = useState<string | null>(null);
-  const perf = useMemo(
-    () =>
-      stage.map((t) => {
-        const fid = attr(t, 'festival_id');
-        const pid = attr(t, 'performance_id');
-        const linked = pid ? equipment.filter((e) => attr(e, 'performance_id') === pid && attr(e, 'festival_id') === fid) : [];
-        return { t, fid, pid, linked };
-      }),
-    [stage, equipment],
+  const config = useMemo(() => (equipment.length ? kpiContextFor('equipment', equipment).festival : undefined), [equipment, kpiContextFor]);
+  const result = useMemo(
+    () => (config && equipment.length ? callEngine(api, 'getFestivalReadinessLinks', equipment, config, 'equipment') : null),
+    [api, config, equipment],
   );
-  if (!stage.length || !equipment.length) {
+  if (!stage.length || !equipment.length || !result) {
     return (
-      <Card title="Stage ↔ Equipment evidence">
-        <p className="text-[13px] text-slate-500">N/A — the log needs both stage and equipment cases with festival_id and performance_id to show links.</p>
+      <Card title="Stage ↔ Equipment readiness">
+        <p className="text-[13px] text-slate-500">N/A — the log needs both stage and equipment cases to compare readiness.</p>
       </Card>
     );
   }
-  const shown = perf.filter((x) => !q || (x.pid ?? caseLabel(x.t.caseKey)).toLowerCase().includes(q.toLowerCase())).slice(0, 60);
-  const cur = perf.find((x) => x.t.caseKey === sel) ?? null;
-  const all = cur ? [cur.t, ...cur.linked] : [];
-  const lo = all.length ? Math.min(...all.map((t) => t.events[0]!.timestampMs)) : 0;
-  const hi = all.length ? Math.max(...all.map((t) => t.events.at(-1)!.timestampMs)) : 1;
-  const pos = (ms: number) => `${((ms - lo) / Math.max(1, hi - lo)) * 100}%`;
   return (
     <Card
-      title="Stage ↔ Equipment evidence"
-      subtitle="Equipment requests recorded with the same festival_id and performance_id as a stage performance. Timelines are shown side by side; no cause is implied."
+      title="Stage ↔ Equipment readiness"
+      subtitle="Equipment requests paired with their performance by festival_id + performance_id (engine linkage; ambiguous IDs are not paired). Shown side by side — no cause is implied."
       actions={<Input className="!w-48 !py-1 text-xs" placeholder="Search performance" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search performance" />}
     >
-      <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <ul className="pp-scroll max-h-80 space-y-1 overflow-auto">
-          {shown.map((x) => (
-            <li key={x.t.caseKey}>
-              <button type="button" onClick={() => setSel(x.t.caseKey)} className={cx('flex w-full items-center justify-between rounded-lg border px-2.5 py-1.5 text-left text-[13px]', sel === x.t.caseKey ? 'border-brand-400 bg-brand-50' : 'border-slate-200 hover:bg-slate-50')}>
-                <span className="font-mono">{x.pid ?? caseLabel(x.t.caseKey)}</span>
-                {x.linked.length ? <Badge tone="violet">{plural(x.linked.length, 'request')}</Badge> : <Badge>none</Badge>}
-              </button>
-            </li>
-          ))}
-        </ul>
-        <div>
-          {!cur ? (
-            <p className="text-[13px] text-slate-500">Choose a performance to compare its stage preparation with its equipment readiness.</p>
-          ) : (
+      <EngineGate result={result}>
+        {(links) => {
+          const groups = new Map<string, FestivalReadinessLink[]>();
+          for (const l of links) {
+            const k = l.linkStatus === 'linked' && l.stageCaseKey ? l.stageCaseKey : `__${l.linkStatus}`;
+            groups.set(k, [...(groups.get(k) ?? []), l]);
+          }
+          const statusCounts = links.reduce<Record<string, number>>((acc, l) => ({ ...acc, [l.linkStatus]: (acc[l.linkStatus] ?? 0) + 1 }), {});
+          const perfs = [...groups.entries()].filter(([k]) => !k.startsWith('__'));
+          const shown = perfs.filter(([k, ls]) => !q || (ls[0]!.performanceId ?? caseLabel(k)).toLowerCase().includes(q.toLowerCase())).slice(0, 80);
+          const cur = sel ? groups.get(sel) ?? null : null;
+          const stageTrace = sel && !sel.startsWith('__') ? traceByKey.get(sel) : undefined;
+          const traces = cur ? [...(stageTrace ? [stageTrace] : []), ...cur.map((l) => traceByKey.get(l.equipmentCaseKey)).filter((t): t is Trace => !!t)] : [];
+          const marks = cur ? cur.flatMap((l) => [l.stageDeadlineMs, l.equipmentDeadlineMs].filter((v): v is number => v !== null)) : [];
+          const lo = traces.length ? Math.min(...traces.map((t) => t.events[0]!.timestampMs), ...marks) : 0;
+          const hi = traces.length ? Math.max(...traces.map((t) => t.events.at(-1)!.timestampMs), ...marks) : 1;
+          const pos = (ms: number) => `${((ms - lo) / Math.max(1, hi - lo)) * 100}%`;
+          const onTime = (v: boolean | null) => (v === null ? <Badge>N/A</Badge> : v ? <Badge tone="green">on time</Badge> : <Badge tone="red">late</Badge>);
+          return (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-[13px]">
-                <b>{cur.pid ?? caseLabel(cur.t.caseKey)}</b>
-                <span className="text-slate-500">festival {cur.fid ?? 'N/A'}</span>
-                <InfoTip>Lookup of recorded IDs. Duplicate or unmatched performance IDs are handled by the engine’s Festival KPIs, which may exclude ambiguous links.</InfoTip>
+              <div className="flex flex-wrap gap-1.5 text-xs">
+                <span className="text-slate-500">{plural(links.length, 'equipment request')}:</span>
+                {Object.entries(statusCounts).map(([k, n]) => (
+                  <button key={k} type="button" onClick={() => k !== 'linked' && setSel(`__${k}`)} className="cursor-pointer">
+                    <Badge tone={k === 'linked' ? 'green' : 'amber'}>{n} {LINK_STATUS[k as FestivalReadinessLink['linkStatus']]}</Badge>
+                  </button>
+                ))}
               </div>
-              {[cur.t, ...cur.linked].map((t) => (
-                <div key={t.caseKey}>
-                  <div className="mb-0.5 flex items-center justify-between text-[12px]">
-                    <button type="button" className="font-medium text-brand-700 hover:underline" onClick={() => dispatch({ type: 'SET_VIEW', view: { selectedCaseKey: t.caseKey } })}>
-                      {processLabel(t.processType, true)} · {caseLabel(t.caseKey)}
-                    </button>
-                    <span className="text-slate-500 tabular">{fmtMinutes(t.elapsedMin)} observed span</span>
-                  </div>
-                  <div className="relative h-6 rounded bg-slate-100">
-                    <div className={cx('absolute top-1 h-4 rounded', t.processType === 'stage' ? 'bg-brand-400' : 'bg-violet-400')} style={{ left: pos(t.events[0]!.timestampMs), width: `calc(${pos(t.events.at(-1)!.timestampMs)} - ${pos(t.events[0]!.timestampMs)} + 2px)` }} />
-                    {t.sequence.map((e) => (
-                      <span key={e.sourceOrder} title={`${e.activity} · ${fmtInstant(e.timestampMs)}`} className="absolute top-0.5 h-5 w-0.5 bg-slate-700/70" style={{ left: pos(e.timestampMs) }} />
-                    ))}
-                  </div>
+              <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+                <ul className="pp-scroll max-h-96 space-y-1 overflow-auto">
+                  {shown.map(([k, ls]) => (
+                    <li key={k}>
+                      <button type="button" onClick={() => setSel(k)} className={cx('flex w-full items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-left text-[13px]', sel === k ? 'border-brand-400 bg-brand-50' : 'border-slate-200 hover:bg-slate-50')}>
+                        <span className="font-mono">{ls[0]!.performanceId ?? caseLabel(k)}</span>
+                        <span className="flex gap-1">
+                          <Badge tone="violet">{ls.length} eq.</Badge>
+                          {ls.some((l) => l.equipmentOnTime === false) && <Badge tone="red">late eq.</Badge>}
+                          {ls[0]!.stageOnTime === false && <Badge tone="amber">stage late</Badge>}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <div>
+                  {!cur ? (
+                    <p className="text-[13px] text-slate-500">Choose a performance to compare its stage readiness with its equipment readiness.</p>
+                  ) : sel!.startsWith('__') ? (
+                    <div className="space-y-2">
+                      <div className="text-[13px] font-semibold text-slate-800">{plural(cur.length, 'request')}: {LINK_STATUS[cur[0]!.linkStatus]}</div>
+                      <p className="text-[12px] text-slate-500">These requests are not paired with a stage performance, so no stage comparison is shown (N/A, not zero).</p>
+                      <ul className="pp-scroll max-h-72 space-y-1 overflow-auto">
+                        {cur.map((l) => (
+                          <li key={l.equipmentCaseKey}>
+                            <button type="button" className="flex w-full justify-between rounded-md border border-slate-200 px-2.5 py-1 text-left text-[12.5px] hover:bg-slate-50" onClick={() => dispatch({ type: 'SET_VIEW', view: { selectedCaseKey: l.equipmentCaseKey } })}>
+                              <span className="font-mono">{caseLabel(l.equipmentCaseKey)}</span>
+                              <span className="text-slate-500">performance {l.performanceId ?? '—'}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap items-center gap-2 text-[13px]">
+                        <b>{cur[0]!.performanceId}</b>
+                        <span className="text-slate-500">festival {cur[0]!.festivalId ?? 'N/A'}</span>
+                        <span className="text-slate-500">· stage ready</span>
+                        {onTime(cur[0]!.stageOnTime)}
+                        <InfoTip>Stage deadline = scheduled_start. Equipment deadline = {cur[0]!.equipmentDeadlineSource === 'required_ready_at' ? 'required_ready_at' : 'linked Stage Setup start'}. On time = ready at or before the deadline.</InfoTip>
+                      </div>
+                      {traces.map((t) => {
+                        const l = cur.find((x) => x.equipmentCaseKey === t.caseKey);
+                        const deadline = l ? l.equipmentDeadlineMs : cur[0]!.stageDeadlineMs;
+                        const ready = l ? l.equipmentReady : cur[0]!.stageReady;
+                        return (
+                          <div key={t.caseKey}>
+                            <div className="mb-0.5 flex items-center justify-between gap-2 text-[12px]">
+                              <button type="button" className="font-medium text-brand-700 hover:underline" onClick={() => dispatch({ type: 'SET_VIEW', view: { selectedCaseKey: t.caseKey } })}>
+                                {processLabel(t.processType, true)} · {caseLabel(t.caseKey)}
+                              </button>
+                              <span className="flex items-center gap-1.5 text-slate-500 tabular">
+                                ready {ready ? fmtTime(ready.timestampMs) : 'N/A'}
+                                {deadline !== null && <> · deadline {fmtTime(deadline)}</>}
+                                {l && onTime(l.equipmentOnTime)}
+                              </span>
+                            </div>
+                            <div className="relative h-6 rounded bg-slate-100">
+                              <div className={cx('absolute top-1 h-4 rounded', t.processType === 'stage' ? 'bg-brand-400' : 'bg-violet-400')} style={{ left: pos(t.events[0]!.timestampMs), width: `calc(${pos(t.events.at(-1)!.timestampMs)} - ${pos(t.events[0]!.timestampMs)} + 2px)` }} />
+                              {ready && <span title={`Ready ${fmtInstant(ready.timestampMs)}`} className="absolute top-0 h-6 w-1 rounded bg-emerald-600" style={{ left: pos(ready.timestampMs) }} />}
+                              {deadline !== null && <span title={`Deadline ${fmtInstant(deadline)}`} className="absolute -top-0.5 h-7 w-0.5 bg-red-500" style={{ left: pos(deadline) }} />}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div className="flex justify-between text-[11px] text-slate-500 tabular"><span>{fmtInstant(lo)}</span><span className="flex items-center gap-2"><span className="inline-block h-2 w-1 bg-emerald-600" /> ready <span className="inline-block h-2 w-0.5 bg-red-500" /> deadline</span><span>{fmtInstant(hi)}</span></div>
+                    </div>
+                  )}
                 </div>
-              ))}
-              {!cur.linked.length && <Notice tone="neutral">No equipment request is recorded for this performance (N/A, not zero equipment).</Notice>}
-              <div className="flex justify-between text-[11px] text-slate-500 tabular"><span>{fmtInstant(lo)}</span><span>{fmtInstant(hi)}</span></div>
+              </div>
             </div>
-          )}
-        </div>
-      </div>
+          );
+        }}
+      </EngineGate>
     </Card>
   );
 }
