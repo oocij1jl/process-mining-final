@@ -1,4 +1,4 @@
-// Phase 1.1 regression checks (UI paths). Results using the UI fixture are UI-path checks, NOT engine validation.
+// Phase 1.1 regression checks (UI paths). Phase 2: every dataset, including the UI fixture CSV, is analysed by src/engine.
 // Run with the dev server or `vite preview` on http://127.0.0.1:5174. Output goes to the OS temp dir.
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -67,14 +67,15 @@ try {
   check('R-CSV', 'Rows sent to the engine keep original file row numbers (0,3)', rawNums === '0,3', rawNums);
   check('R-CSV', 'Excluded rows remain listed in an import report card', t.includes('Excluded malformed rows'));
   check('R-PROV', 'Uploaded log: source "User-uploaded log", provider "engine"', t.includes('User-uploaded log') && t.includes('Provider: engine'));
-  check('R-PROV', 'Engine stub shows not-implemented state (NOT TESTABLE for real values)', t.includes('Engine function not implemented yet'));
+  // Phase 2: rows 0 and 3 (cases 1 and 4) are analysed by the engine → 2 accepted events, 2 cases, no not-implemented state.
+  check('R-PROV', 'Uploaded log is analysed by the engine (2 accepted events from rows 0 and 3)', !t.includes('Engine function not implemented yet') && t.includes('Ready for analysis') && /Accepted events\s*2\b/.test(t));
   await b.shot('r-csv-malformed', true);
 
   // ---------- R-PROV: fixture provenance ----------
   await b.click('Load UI fixture');
   await b.set('.sticky select', 'audience');
   t = await text();
-  check('R-PROV', 'Fixture: source "UI fixture CSV" and provider "UI fixture (hand-authored)" shown separately', t.includes('UI fixture CSV') && t.includes('Provider: UI fixture (hand-authored)'));
+  check('R-PROV', 'Fixture: source "UI fixture CSV" and provider "engine" shown separately (no hand-authored label)', t.includes('UI fixture CSV') && t.includes('Provider: engine') && !t.includes('Provider: UI fixture (hand-authored)'));
   await nav('Model');
   const baseIdx = await b.eval(`[...document.querySelectorAll('main input')].map(i => i.closest('label')?.innerText.split('\\n')[0]).indexOf('Baseline gates')`);
   await b.set('main input', '1', baseIdx);
@@ -87,15 +88,15 @@ try {
   await b.click('Run baseline + candidate');
   await b.click('Apply to Implementation plan →');
   t = await text();
-  check('R-PROV', 'Plan created from fixture scenario is labelled UI fixture', t.includes('UI fixture (hand-authored)') && t.includes('Plan generated from hand-authored UI fixture results'));
+  check('R-PROV', 'Plan created from the engine scenario on the fixture CSV is labelled engine (not UI fixture)', !t.includes('UI fixture (hand-authored)') && !t.includes('Plan generated from hand-authored UI fixture results') && /Results provider\s*engine/.test(t));
   await nav('Evidence Export');
   await captureDownloads();
   await b.click('Action plans (all revisions)');
   const plansCsv = await lastDownload();
-  check('R-PROV', 'Plans CSV carries provider=ui_fixture', /(^|,)provider(,|$)/.test(plansCsv.split('\n')[0]) && plansCsv.includes('ui_fixture'));
+  check('R-PROV', 'Plans CSV carries provider=engine', /(^|,)provider(,|$)/.test(plansCsv.split('\n')[0]) && plansCsv.includes('engine') && !plansCsv.includes('ui_fixture'));
   await b.click('Download evidence JSON');
   const ev = JSON.parse(await lastDownload());
-  check('R-PROV', 'Evidence JSON records provider, workspace scope and plan provider', ev.provider === 'ui_fixture' && ev.workspace?.provider === 'ui_fixture' && ev.plans.every((p) => p.provider === 'ui_fixture'));
+  check('R-PROV', 'Evidence JSON records provider, workspace scope and plan provider (engine)', ev.provider === 'engine' && ev.workspace?.provider === 'engine' && ev.plans.length > 0 && ev.plans.every((p) => p.provider === 'engine'));
   check('R-PROV', 'Evidence JSON uses engine metric IDs/units (audience_queue_wait_mean, min)', ev.kpis.status === 'ok' && ev.kpis.data.some((m) => m.id === 'audience_queue_wait_mean' && m.unit === 'min'));
 
   // ---------- R-SCOPE: analysis filter → separate records, archived/history view ----------

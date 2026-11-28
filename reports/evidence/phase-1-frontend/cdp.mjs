@@ -39,9 +39,21 @@ export async function launch(outDir, port = 9333) {
   });
   await send('Page.enable'); await send('Runtime.enable');
   await send('Emulation.setDeviceMetricsOverride', { width: 1500, height: 1000, deviceScaleFactor: 1, mobile: false });
+  // Deterministic viewer timezone (date filters and expected values assume KST unless PP_TZ is set).
+  await send('Emulation.setTimezoneOverride', { timezoneId: process.env.PP_TZ ?? 'Asia/Seoul' });
 
   const api = {
     logs,
+    send,
+    /** Drags with the left mouse button from (x1,y1) to (x2,y2) in viewport coordinates. */
+    async drag(x1, y1, x2, y2, steps = 8) {
+      await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: x1, y: y1, button: 'left', buttons: 1, clickCount: 1 });
+      for (let i = 1; i <= steps; i++) {
+        await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: x1 + ((x2 - x1) * i) / steps, y: y1 + ((y2 - y1) * i) / steps, button: 'left', buttons: 1 });
+      }
+      await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: x2, y: y2, button: 'left', buttons: 0, clickCount: 1 });
+      await sleep(400);
+    },
     async go(url) { await send('Page.navigate', { url }); await sleep(1200); },
     async eval(expr) {
       const r = await send('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true });

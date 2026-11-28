@@ -1,0 +1,5 @@
+event_id,process_type,case_id,activity,timestamp,lifecycle,activity_instance_id,festival_id
+A1,audience,X1,Ticket Verification,2026-11-27T00:08:00Z,start,t1,F1
+A2,audience,X1,Ticket Verification,2026-11-27T00:09:00Z,complete,t1,F1
+A3,audience,X1,Entry Rejected,2026-11-27T00:10:00Z,,,F1
+A4,audience,X1,Join Entry Queue,2026-11-27T00:11:00Z,,,F1

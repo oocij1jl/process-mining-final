@@ -4,7 +4,7 @@ import { uid, useStore, useWorkspace } from '../state/store';
 import { gateScenarioAvailable } from '../festival/adapter';
 import { OtherScopesNote } from '../components/WorkspaceHistory';
 import type { DesignRecord, DesignStatus, PageId } from '../state/types';
-import { fmtInstant, plural } from '../lib/format';
+import { displayResourceKeys, fmtInstant, plural } from '../lib/format';
 import { FlowGraph, type GraphSelection } from '../components/graph/FlowGraph';
 import { RequireData } from '../components/layout';
 import { Badge, Button, Card, EmptyState, Field, Input, Notice, PageHeader, Select, Tabs, TextArea, cx } from '../components/ui';
@@ -190,7 +190,7 @@ function DesignEditor({ design, navigate }: { design: DesignRecord; navigate: (p
               {allFindings.map((f) => (
                 <label key={f.id} className="flex items-start gap-2 text-xs">
                   <input type="checkbox" className="mt-0.5" checked={draft.findingIds.includes(f.id)} onChange={() => setDraft({ ...draft, findingIds: toggle(draft.findingIds, f.id) })} />
-                  <span>{f.text}</span>
+                  <span>{displayResourceKeys(f.text)}</span>
                 </label>
               ))}
               {draft.findingIds.filter((id) => !allFindings.some((f) => f.id === id)).map((id) => (

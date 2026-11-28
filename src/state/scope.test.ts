@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import type { DatasetState, ProcessWorkspace } from './types';
 import { currentWorkspaceKey, datasetIdFor, initialView, migrateLegacy, reducer } from './store';
-import { FIXTURE_DATASET_PROVIDER, filterFingerprint, providerFor, scopeOf } from './scope';
+import { FIXTURE_DATASET_PROVIDER, filterFingerprint, providerFor, scopeOf, workspaceKey } from './scope';
 import type { AppState } from './types';
 
 function dataset(over: Partial<DatasetState> = {}): DatasetState {
@@ -50,13 +50,22 @@ describe('analysis scope and workspace keys', () => {
   });
 
   test('fixture and engine records never share a workspace', () => {
+    // Phase 2 integration: every source, including the UI fixture CSV, is analysed by src/engine.
+    expect(FIXTURE_DATASET_PROVIDER).toBe('engine');
     expect(providerFor({ sourceKind: 'ui_fixture' })).toBe(FIXTURE_DATASET_PROVIDER);
     expect(providerFor({ sourceKind: 'user_upload' })).toBe('engine');
     expect(providerFor({ sourceKind: 'festival_sample' })).toBe('engine');
     const fx = dataset({ sourceKind: 'ui_fixture' });
     const up = dataset({ sourceKind: 'user_upload' });
     expect(fx.id).toBe(up.id); // same content and policy
-    expect(currentWorkspaceKey(fx, app(fx).view)).not.toBe(currentWorkspaceKey(up, app(up).view));
+    // Records computed by the hand-authored fixture provider (pre-integration) keep their own key,
+    // so they can never appear as engine records for the same dataset scope.
+    const scope = scopeOf(fx, app(fx).view)!;
+    expect(workspaceKey(scope, 'ui_fixture')).not.toBe(workspaceKey(scope, 'engine'));
+    expect(currentWorkspaceKey(fx, app(fx).view)).toBe(workspaceKey(scope, 'engine'));
+    expect(currentWorkspaceKey(fx, app(fx).view)).not.toBe(workspaceKey(scope, 'ui_fixture'));
+    // Same content and policy analysed by the same engine is the same SPEC scope (dataset + process + filter).
+    expect(currentWorkspaceKey(up, app(up).view)).toBe(currentWorkspaceKey(fx, app(fx).view));
   });
 
   test('enabling Festival adapters or excluding malformed rows creates a new dataset revision', () => {

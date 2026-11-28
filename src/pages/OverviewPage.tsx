@@ -254,8 +254,8 @@ export function OverviewPage({ navigate }: { navigate: (p: PageId) => void }) {
       <div className="grid gap-4 lg:grid-cols-3">
         <Card title="UI fixture" subtitle="20-row test log for UI checks (not a Festival dataset)">
           <p className="text-sm text-slate-600">
-            Two generic cases plus three audience entries in the Festival audience schema. While the engine integration is pending, its
-            results come from hand-calculated values and are labelled <Badge tone="amber">Provider: UI fixture</Badge>.
+            Two generic cases plus three audience entries in the Festival audience schema. Small hand-authored test data, not the
+            Festival dataset and not observed data. Analysed by the engine like any other log; see the provider badge in the scope bar.
           </p>
           <Button className="mt-3" onClick={loadFixture}>
             Load UI fixture
@@ -423,6 +423,11 @@ function MappingEditor({
             <span>
               Enable Festival case-study adapters
               <span className="block text-xs text-slate-400">Adds Festival KPIs, rework rules, Festival process names and the audience gate simulation. Leave off for general logs.</span>
+              {draft.festival && !(draft.requireProcessType && draft.mapping.festival_id) && (
+                <span className="block text-xs text-amber-700">
+                  Audience time-order warnings at import (e.g. a step recorded before Join Entry Queue) also need “Require process_type” and a mapped festival_id. Festival KPIs still exclude out-of-order evidence.
+                </span>
+              )}
             </span>
           </label>
         </div>

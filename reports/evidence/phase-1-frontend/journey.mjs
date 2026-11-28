@@ -15,7 +15,8 @@ try {
   await b.click('Load UI fixture');
   let t = await b.text();
   check('Fixture loads; validation counts', t.includes('Ready for analysis') && t.includes('Accepted events'));
-  check('Fixture warning issue shown', t.includes('fixture.tied_timestamp'));
+  // Phase 2 (engine): ENT001 Join Entry Queue and Ticket Verification start share 09:00:00Z → one timestamp_tie warning (row 9, A02).
+  check('Fixture warning issue shown (engine timestamp_tie on row 9)', t.includes('timestamp_tie') && !t.includes('fixture.'));
   await b.shot('02-overview-fixture', true);
 
   await b.set('.sticky select', 'default');
@@ -104,11 +105,14 @@ try {
   check('New revision plan; old archived', t.includes('archived') && t.includes('1 → 3'));
   await b.shot('13-implementation-rev2', true);
 
-  // Date filter → fixture unavailable state
+  // Date filter (KST 18:00:01 = 09:00:01Z) → engine recomputes on whole cases by first event:
+  // ENT001 starts 09:00:00Z (excluded); ENT002 09:00:01Z and ENT003 09:00:02Z (included) → 2 of 3 cases, Join Entry Queue = 2.
   await b.set('input[aria-label="From"]', '2026-11-27T18:00:01');
   await b.click('Analysis', { partial: true, selector: 'nav button' });
-  t = await b.text();
-  check('Subset filter shows explicit fixture-unavailable state', t.includes('No UI fixture value'));
+  await new Promise((r) => setTimeout(r, 800));
+  t = await b.eval('document.body.innerText');
+  const joinNode = await b.eval(`[...document.querySelectorAll('.react-flow__node')].map(n => n.innerText).find(x => x.startsWith('Join Entry Queue')) ?? ''`);
+  check('Subset filter recomputes with the engine (2 of 3 whole cases; Join Entry Queue=2)', t.includes('2 of 3 cases') && /\n2\n/.test('\n' + joinNode + '\n') && !t.includes('No UI fixture value'), JSON.stringify(joinNode));
   await b.shot('14-filter-unavailable');
   await b.click('Implementation', { partial: true, selector: 'nav button' });
   t = await b.text();
@@ -127,7 +131,8 @@ try {
   await b.shot('16-mapping');
   await b.click('Validate & load');
   t = await b.text();
-  check('Real engine stub → explicit not-implemented state', t.includes('Engine function not implemented yet') && t.includes('validateAndNormalize'));
+  // Phase 2: the upload path is analysed by src/engine (1 raw row → 1 accepted event, 1 case, ready).
+  check('Uploaded CSV analysed by the engine (1 accepted event, 1 case, no not-implemented state)', t.includes('Ready for analysis') && !t.includes('not implemented') && (await b.eval('document.body.innerText')).includes('1 of 1 case'));
   await b.shot('17-engine-not-implemented', true);
 } catch (e) {
   results.push(`ERROR ${e.message}`);

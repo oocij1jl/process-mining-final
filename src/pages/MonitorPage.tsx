@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { Metric, ThroughputBucket } from '../contracts';
+import { targetBreachFinding } from '../lib/evidence';
 import { isScopeStale, useAnalysis } from '../state/analysis';
 import { useStore, useWorkspace } from '../state/store';
 import type { PageId } from '../state/types';
@@ -28,7 +29,8 @@ export function MonitorPage({ navigate }: { navigate: (p: PageId) => void }) {
 }
 
 function Content({ navigate }: { navigate: (p: PageId) => void }) {
-  const { kpis, evaluations } = useAnalysis();
+  const { kpis, evaluations, findings } = useAnalysis();
+  const findingList = findings?.status === 'ok' ? findings.data : undefined;
   const ws = useWorkspace()!;
   const [drill, setDrill] = useState<{ title: string; caseKeys: string[] } | null>(null);
   const evalMap = new Map((evaluations?.status === 'ok' ? evaluations.data : []).map((e) => [e.metricId, e.status]));
@@ -81,6 +83,8 @@ function Content({ navigate }: { navigate: (p: PageId) => void }) {
                       <ul className="space-y-2">
                         {breached.map((t) => {
                           const m = metrics.find((x) => x.id === t.metricId)!;
+                          const evidence = targetBreachFinding(findingList, t);
+                          const evidenceKeys = evidence?.caseKeys ?? m.caseKeys;
                           return (
                             <li key={t.metricId} className="rounded-md border border-red-200 bg-red-50 p-2.5 text-sm">
                               <div className="flex items-center justify-between gap-2">
@@ -90,10 +94,15 @@ function Content({ navigate }: { navigate: (p: PageId) => void }) {
                               <div className="mt-1 text-red-900">
                                 Measured {fmtValue(m.value, m.unit)} vs target {t.direction === 'max' ? '≤' : '≥'} {fmtValue(t.value, t.unit)}
                               </div>
-                              {m.caseKeys.length > 0 && (
-                                <button className="mt-1 text-xs font-medium text-red-700 hover:underline" onClick={() => setDrill({ title: t.metricId, caseKeys: m.caseKeys })}>
-                                  Inspect {plural(m.caseKeys.length, 'case')} →
+                              {evidenceKeys.length > 0 ? (
+                                <button
+                                  className="mt-1 text-xs font-medium text-red-700 hover:underline"
+                                  onClick={() => setDrill({ title: `${t.metricId} · ${evidence ? 'target-breach evidence (engine finding)' : 'KPI cases'}`, caseKeys: evidenceKeys })}
+                                >
+                                  Inspect {plural(evidenceKeys.length, evidence ? 'evidence case' : 'case')} →
                                 </button>
+                              ) : (
+                                <div className="mt-1 text-xs text-red-800">No case-level evidence returned for this aggregate target.</div>
                               )}
                             </li>
                           );
@@ -181,7 +190,10 @@ function ThroughputCard({ metric, onDrill }: { metric?: Metric; onDrill: (b: Thr
       )}
       {metric && (
         <p className="mt-2 text-xs text-slate-500">
-          Unit {metric.unit}; bucket width {state.view.throughputBucketMin} min. Time periods without a returned bucket are shown as gaps, not as zero.
+          Unit {metric.unit}; bucket width {state.view.throughputBucketMin} min. Buckets cover the log observation span returned by the engine.
+          A bucket with 0 means no completion was recorded in this log during that interval; it is not a measurement of the whole
+          operation, and time outside the span is not observed. Periods without a returned bucket are left as gaps.
+          {metric.value === null && metric.reason ? ` N/A: ${metric.reason}` : ''}
         </p>
       )}
     </Card>

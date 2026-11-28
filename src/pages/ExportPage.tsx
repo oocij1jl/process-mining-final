@@ -10,7 +10,7 @@ import { Badge, Button, Card, KeyValue, Notice, PageHeader } from '../components
 import { planExport } from './ImplementationPage';
 import { WorkspaceHistory } from '../components/WorkspaceHistory';
 
-const APP_VERSION = '0.2.1-ui-phase1.1';
+const APP_VERSION = '0.2.1-integration-phase2';
 
 function section<T>(r: EngineResult<T> | null) {
   if (!r) return { status: 'not_computed' };
@@ -96,6 +96,8 @@ export function ExportPage({ navigate }: { navigate: (p: PageId) => void }) {
   const d = state.dataset;
   const base = `processpilot-${d?.id ?? 'none'}-${state.view.processKey ?? 'none'}`;
   const scopeCols = () => ({ dataset_id: d?.id, process: state.view.processKey, filter: a.scope?.analysisFilterFingerprint, provider: a.provider });
+  // Appended (not prefixed) so the leading scope columns keep their order.
+  const filterCols = () => ({ case_start_from: state.view.dateFrom || '', case_start_to: state.view.dateTo || '', selected_cases: a.selectedTraces.length });
 
   const csvButtons: { label: string; disabled: boolean; run: () => void }[] = [
     {
@@ -106,39 +108,39 @@ export function ExportPage({ navigate }: { navigate: (p: PageId) => void }) {
         const ev = new Map((a.evaluations?.status === 'ok' ? a.evaluations.data : []).map((e) => [e.metricId, e.status]));
         downloadCSV(`${base}-kpis.csv`, a.kpis.data.map((m) => {
           const t = ws?.targets.find((x) => x.metricId === m.id);
-          return { ...scopeCols(), metric_id: m.id, value: m.value ?? 'N/A', unit: m.unit, n: m.n, eligible: m.eligible, definition: m.definition, reason: m.reason ?? '', target: t?.value ?? '', direction: t?.direction ?? '', status: t ? ev.get(m.id) ?? '' : '' };
+          return { ...scopeCols(), metric_id: m.id, value: m.value ?? 'N/A', unit: m.unit, n: m.n, eligible: m.eligible, definition: m.definition, reason: m.reason ?? '', target: t?.value ?? '', direction: t?.direction ?? '', status: t ? ev.get(m.id) ?? '' : '', case_keys: m.caseKeys, ...filterCols() };
         }));
       },
     },
     {
       label: 'DFG edges',
       disabled: a.dfg?.status !== 'ok',
-      run: () => a.dfg?.status === 'ok' && downloadCSV(`${base}-dfg-edges.csv`, a.dfg.data.edges.map((e) => ({ ...scopeCols(), from: e.from, to: e.to, count: e.count, cases: e.caseKeys.length, case_keys: e.caseKeys }))),
+      run: () => a.dfg?.status === 'ok' && downloadCSV(`${base}-dfg-edges.csv`, a.dfg.data.edges.map((e) => ({ ...scopeCols(), from: e.from, to: e.to, count: e.count, cases: e.caseKeys.length, case_keys: e.caseKeys, ...filterCols() }))),
     },
     {
       label: 'Variants',
       disabled: a.variants?.status !== 'ok',
-      run: () => a.variants?.status === 'ok' && downloadCSV(`${base}-variants.csv`, a.variants.data.map((v) => ({ ...scopeCols(), variant_id: v.id, count: v.count, share: v.share, avg_elapsed_min: v.avgElapsedMin, activities: v.activities.join(' > ') }))),
+      run: () => a.variants?.status === 'ok' && downloadCSV(`${base}-variants.csv`, a.variants.data.map((v) => ({ ...scopeCols(), variant_id: v.id, count: v.count, share: v.share, share_scale: 'fraction 0-1', avg_elapsed_min: v.avgElapsedMin, activities: v.activities.join(' > '), case_keys: v.caseKeys, ...filterCols() }))),
     },
     {
       label: 'Performance gaps',
       disabled: a.performance?.status !== 'ok',
-      run: () => a.performance?.status === 'ok' && downloadCSV(`${base}-performance.csv`, a.performance.data.gaps.map((g) => ({ ...scopeCols(), metric_type: g.metricType, from: g.from, to: g.to ?? '', mean_min: g.meanMin, n: g.n }))),
+      run: () => a.performance?.status === 'ok' && downloadCSV(`${base}-performance.csv`, a.performance.data.gaps.map((g) => ({ ...scopeCols(), metric_type: g.metricType, from: g.from, to: g.to ?? '', mean_min: g.meanMin, n: g.n, cases: g.caseKeys.length, case_keys: g.caseKeys, ...filterCols() }))),
     },
     {
       label: 'Resource workload',
       disabled: a.resources?.status !== 'ok',
-      run: () => a.resources?.status === 'ok' && downloadCSV(`${base}-resources.csv`, a.resources.data.resources.map((r) => ({ ...scopeCols(), resource: r.resource, roles: r.roles.join('|'), raw_events: r.rawEvents, instances: r.instances, distinct_cases: r.distinctCases, active_min: r.activeMin ?? 'N/A', utilization: 'N/A (no validated shifts)', activity_counts: r.activityCounts }))),
+      run: () => a.resources?.status === 'ok' && downloadCSV(`${base}-resources.csv`, a.resources.data.resources.map((r) => ({ ...scopeCols(), resource: r.resource, roles: r.roles.join('|'), raw_events: r.rawEvents, instances: r.instances, distinct_cases: r.distinctCases, active_min: r.activeMin ?? 'N/A', utilization: 'N/A (no validated shifts)', activity_counts: r.activityCounts, case_keys: r.caseKeys, ...filterCols() }))),
     },
     {
       label: 'Resource handoffs',
       disabled: a.resources?.status !== 'ok',
-      run: () => a.resources?.status === 'ok' && downloadCSV(`${base}-handoffs.csv`, a.resources.data.handoffs.map((h) => ({ ...scopeCols(), from: h.from, to: h.to, count: h.count, cases: h.caseKeys.length, case_keys: h.caseKeys }))),
+      run: () => a.resources?.status === 'ok' && downloadCSV(`${base}-handoffs.csv`, a.resources.data.handoffs.map((h) => ({ ...scopeCols(), from: h.from, to: h.to, count: h.count, cases: h.caseKeys.length, case_keys: h.caseKeys, ...filterCols() }))),
     },
     {
       label: 'Findings',
       disabled: a.findings?.status !== 'ok',
-      run: () => a.findings?.status === 'ok' && downloadCSV(`${base}-findings.csv`, a.findings.data.map((f) => ({ ...scopeCols(), finding_id: f.id, metric_id: f.metricId, value: f.value, unit: f.unit, n: f.n, support: f.support ?? '', edge: f.edge ? `${f.edge.from} > ${f.edge.to}` : '', text: f.text, proposal: f.proposal, case_keys: f.caseKeys }))),
+      run: () => a.findings?.status === 'ok' && downloadCSV(`${base}-findings.csv`, a.findings.data.map((f) => ({ ...scopeCols(), finding_id: f.id, metric_id: f.metricId, value: f.value, unit: f.unit, n: f.n, eligible: f.eligible ?? '', support: f.support ?? '', edge: f.edge ? `${f.edge.from} > ${f.edge.to}` : '', text: f.text, proposal: f.proposal, case_keys: f.caseKeys, ...filterCols() }))),
     },
     {
       label: 'Validation issues',

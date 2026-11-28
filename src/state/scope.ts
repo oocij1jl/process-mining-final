@@ -15,7 +15,7 @@ import type { DatasetState, ProviderKind, ViewState } from './types';
  * this to 'engine' so the fixture CSV is analysed by src/engine like any other
  * log; labels, workspace keys and plans follow the provider automatically.
  */
-export const FIXTURE_DATASET_PROVIDER: ProviderKind = 'ui_fixture';
+export const FIXTURE_DATASET_PROVIDER: ProviderKind = 'engine';
 
 export function providerFor(dataset: Pick<DatasetState, 'sourceKind'> | null): ProviderKind {
   return dataset?.sourceKind === 'ui_fixture' ? FIXTURE_DATASET_PROVIDER : 'engine';

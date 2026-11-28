@@ -1,0 +1,21 @@
+PASS  Empty state without dataset
+PASS  Fixture loads; validation counts
+PASS  Fixture warning issue shown (engine timestamp_tie on row 9)
+PASS  DFG renders default process (3 act + start/end, 4 edges + 1 start + 1 end) — nodes=5 edges=6
+PASS  Node click shows contributing cases
+PASS  Handoff network has R1→R2 and R2→R1 as separate edges — edges=2
+PASS  Handoff edge click lists 1 case
+PASS  Audience: no-handoff empty state with isolated node
+PASS  Design record created and editor shown
+PASS  Monitor shows breach after target 0.01 min
+PASS  Monitor shows met after target 1 min; measured unchanged
+PASS  Scenario computed (1 gate mean 3 s → 2 gates 0.7 s)
+PASS  Plan created with +1 gate / +1 worker
+PASS  Stale after candidate change; apply disabled
+PASS  New revision plan; old archived
+PASS  Subset filter recomputes with the engine (2 of 3 whole cases; Join Entry Queue=2) — "Join Entry Queue\n2\n2 cases"
+PASS  Other-filter scope does not show the plan as current (history only)
+PASS  Upload opens mapping editor with auto-mapping
+PASS  Uploaded CSV analysed by the engine (1 accepted event, 1 case, no not-implemented state)
+--- console/log ---
+dialog: Create a new plan revision from scenario rev 2? 1 current plan will be archived (kept for export, not deleted).

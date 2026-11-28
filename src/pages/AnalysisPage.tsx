@@ -5,7 +5,7 @@ import { useAnalysis } from '../state/analysis';
 import { uid, useStore, useWorkspace } from '../state/store';
 import { gateScenarioAvailable } from '../festival/adapter';
 import type { DesignRecord, PageId } from '../state/types';
-import { caseLabel, fmtMinutes, fmtNumber, fmtPct, fmtShare, fmtValue, plural, resourceLabel } from '../lib/format';
+import { caseLabel, displayResourceKeys, fmtMinutes, fmtNumber, fmtPct, fmtShare, fmtValue, plural, resourceLabel } from '../lib/format';
 import { FlowGraph, GraphLegend, type GraphEdgeSpec, type GraphNodeSpec, type GraphSelection } from '../components/graph/FlowGraph';
 import { CaseKeyList } from '../components/cases';
 import { RequireData } from '../components/layout';
@@ -463,7 +463,7 @@ function ResourceFilter({ all, focus, onChange }: { all: string[]; focus: Set<st
   return (
     <Card
       title="Resource display filter"
-      subtitle="Shows only the chosen resources and their direct handoff partners in the graph and tables. Display only: coverage, KPIs, findings, other pages and exports still use every case in the analysis scope."
+      subtitle="Display only. The network shows the chosen resources and their direct handoff partners, the handoff table lists handoffs touching them, and the workload table lists the chosen resources. Coverage, KPIs, findings, other pages and exports still use every case in the analysis scope."
       actions={
         <>
           <Input placeholder="Search resource" className="!w-44 !py-1 text-xs" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search resource" />
@@ -691,7 +691,7 @@ function Findings({ navigate }: { navigate: (p: PageId) => void }) {
                         {f.support === 'low' && <Badge tone="amber">low support (n &lt; 3)</Badge>}
                         {f.edge && <Badge>{f.edge.from} → {f.edge.to}</Badge>}
                       </div>
-                      <p className="mt-2 text-sm font-medium text-slate-900">{f.text}</p>
+                      <p className="mt-2 text-sm font-medium text-slate-900">{displayResourceKeys(f.text)}</p>
                       <p className="mt-1 text-sm text-slate-600"><span className="font-medium text-slate-500">Suggested investigation:</span> {f.proposal}</p>
                       <div className="mt-2 flex flex-wrap gap-x-4 text-xs text-slate-500 tabular">
                         <span>Value <b className="text-slate-700">{fmtValue(f.value, f.unit)}</b></span>

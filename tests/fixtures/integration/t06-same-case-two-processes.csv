@@ -1,0 +1,5 @@
+process_type,case_id,activity,timestamp
+stage,P1,Setup,2026-11-27T00:00:00Z
+stage,P1,Check,2026-11-27T00:10:00Z
+equipment,P1,Request,2026-11-27T00:01:00Z
+equipment,P1,Ready,2026-11-27T00:05:00Z

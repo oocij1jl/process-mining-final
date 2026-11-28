@@ -1,0 +1,23 @@
+
+> processpilot@0.2.1 build
+> tsc --noEmit && vite build
+
+vite v8.4.0 building client environment for production...
+transforming...
+✓ 770 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                          0.39 kB │ gzip:   0.26 kB
+dist/assets/bpmn-Cyvp-fAH.eot           48.80 kB
+dist/assets/bpmn-0HrGCizt.svg          136.01 kB │ gzip:  25.97 kB
+dist/assets/index-BlmHDqQW.css          50.11 kB │ gzip:   9.42 kB
+dist/assets/BpmnViewer-CF1x61c8.css    118.55 kB │ gzip:  51.22 kB
+dist/assets/BpmnViewer-tUrLXKnf.js     197.65 kB │ gzip:  56.69 kB
+dist/assets/index-B1CHtSPK.js        1,091.93 kB │ gzip: 324.35 kB
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 507ms

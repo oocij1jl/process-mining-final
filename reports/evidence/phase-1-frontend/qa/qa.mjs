@@ -56,7 +56,8 @@ try {
   await captureDownloads();
   await b.click('Download evidence JSON');
   const ev = JSON.parse(await lastDownload());
-  check('Q12', 'Evidence JSON labels provider as UI fixture', ev.provider === 'ui_fixture' && ev.providerDescription.startsWith('UI FIXTURE'));
+  // Phase 2: the UI fixture CSV is analysed by src/engine; the provider label must say so (never "UI fixture").
+  check('Q12', 'Evidence JSON labels provider as engine (src/engine), source stays UI fixture CSV', ev.provider === 'engine' && ev.providerDescription === 'src/engine' && ev.dataset.sourceKind === 'ui_fixture');
   check('Q12', 'Evidence JSON has dataset id, scope, filter, metric definitions', !!ev.dataset.id && ev.scope?.processKey === 'default' && ev.filter.selectedCases === 2 && !!ev.metricFamilies);
   check('Q12', 'Evidence DFG equals on-screen fixture DFG (A=3,B=1,C=2; 4 edges)', ev.dfg.status === 'ok' && ev.dfg.data.nodes.map(n=>`${n.activity}=${n.count}`).join(',') === 'A=3,B=1,C=2' && ev.dfg.data.edges.length === 4);
   check('Q12', 'Evidence JSON excludes raw rows', !JSON.stringify(ev).includes('2026-11-27T00:21:00Z'));
@@ -92,6 +93,9 @@ try {
   await b.shot('q13-bpmn-no-di');
 
   // Q7: reload → workspace restored; BPMN XML not persisted → To-be reference message
+  // Engine finding for the fixture audience process: largest inter-event gap Join Entry Queue → Ticket Verification
+  // (4, 7, 10 s → mean 7 s), so the design title is that finding's proposal text.
+  const titleBefore = await b.eval(`Object.values(JSON.parse(localStorage.getItem('processpilot.workspaces.v2')).workspaces).flatMap(w => w.designs).map(d => d.title)[0] ?? ''`);
   await b.eval(`location.hash = '#/overview'; setTimeout(() => location.reload(), 0); true`);
   await wait(2000);
   const inMemoryGone = await b.eval(`!document.body.innerText.includes('Ready for analysis')`);
@@ -100,7 +104,7 @@ try {
   await b.set('.sticky select', 'audience');
   await nav('Design');
   await wait(400);
-  const designsRestored = (await b.text()).includes('Investigate gate capacity');
+  const designsRestored = titleBefore.startsWith('Review the contributing cases for possible handover delays') && (await b.text()).includes(titleBefore);
   check('Q7', 'Design record restored after reload for the same dataset', designsRestored);
   await b.click('To-be BPMN', { selector: '[role=tab]' });
   const tobeMsg = await b.text();

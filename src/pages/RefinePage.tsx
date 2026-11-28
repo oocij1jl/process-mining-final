@@ -8,7 +8,7 @@ import { planFromProposal, planFromScenario } from '../state/plans';
 import { QUEUE_WAIT_METRIC_ID, gateScenarioAvailable } from '../festival/adapter';
 import { OtherScopesNote } from '../components/WorkspaceHistory';
 import type { PageId, ProcessWorkspace, ScenarioRecord } from '../state/types';
-import { caseLabel, fmtInstant, fmtMinutes, fmtNumber, fmtValue, plural } from '../lib/format';
+import { caseLabel, displayResourceKeys, fmtInstant, fmtMinutes, fmtNumber, fmtValue, plural } from '../lib/format';
 import { RequireData } from '../components/layout';
 import { Badge, Button, Card, EmptyState, EngineGate, KeyValue, Notice, PageHeader, Select, Stat, Table, Td, Th, cx } from '../components/ui';
 import { StatusBadge } from './ModelPage';
@@ -363,7 +363,7 @@ function Recommendations({ navigate }: { navigate: (p: PageId) => void }) {
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-medium text-slate-800">{f.proposal}</div>
-                      <div className="mt-0.5 text-xs text-slate-500">Evidence: {f.text} <code className="font-mono">({f.id})</code></div>
+                      <div className="mt-0.5 text-xs text-slate-500">Evidence: {displayResourceKeys(f.text)} <code className="font-mono">({f.id})</code></div>
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {designs.length === 0 && <Button size="sm" onClick={() => navigate('analysis')}>Create design from finding</Button>}

@@ -116,3 +116,15 @@ export function resourceLabel(key: string): string {
   }
   return key;
 }
+
+/** Matches an engine resource key (`@resource:` + JSON string array) embedded in engine text. */
+const RESOURCE_KEY_IN_TEXT = /@resource:\[(?:"(?:[^"\\]|\\.)*")(?:,"(?:[^"\\]|\\.)*")*\]/g;
+
+/**
+ * Display-only: replaces engine resource keys inside engine-generated text
+ * (e.g. Finding.text) with readable labels. The stored/exported text keeps the
+ * original keys.
+ */
+export function displayResourceKeys(text: string): string {
+  return text.replace(RESOURCE_KEY_IN_TEXT, (key) => resourceLabel(key));
+}

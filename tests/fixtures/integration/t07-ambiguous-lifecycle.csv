@@ -1,0 +1,5 @@
+case_id,activity,timestamp,lifecycle
+1,A,2026-11-27T00:00:00Z,start
+1,A,2026-11-27T00:01:00Z,start
+1,A,2026-11-27T00:05:00Z,complete
+1,B,2026-11-27T00:06:00Z,
