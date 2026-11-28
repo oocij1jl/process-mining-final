@@ -1,0 +1,61 @@
+{
+  "dataset_id": "demo-festival-ops-2026-v1",
+  "name": "Demo Festival Operations 2026 (synthetic)",
+  "source_type": "synthetic",
+  "csv": "demo_festival_operations_2026.csv",
+  "timezone": "Asia/Seoul",
+  "baseline_gate_count": 3,
+  "service_activity": "Ticket Verification",
+  "missing_resource_values": [
+    "",
+    "NONE",
+    "NULL",
+    "0;n/a"
+  ],
+  "bpmn": {
+    "stage": "stage_as_is.bpmn",
+    "audience": "audience_as_is.bpmn",
+    "equipment": "equipment_as_is.bpmn"
+  },
+  "bpmn_to_be": {
+    "audience": "audience_to_be.bpmn"
+  },
+  "festival_config": {
+    "technical_check_repeat_activity": "Technical Check",
+    "stage_handover_point_fallback": false,
+    "equipment_deadline": "required_ready_at"
+  },
+  "generator": {
+    "version": "1.0.0",
+    "seed": 20261127
+  },
+  "source_references": [
+    "Fuji Rock Festival '25 visitor information (wristband exchange, re-entry rule) — https://25.en.fujirockfestival.com/news/0718e/index.htm",
+    "Fuji Rock Festival '22 facility guide (entrance gate: bag check, wristband check) — https://en.fujirockfestival.com/2022/?p=27",
+    "FUJI ROCK FESTIVAL'25 e+ ticket info (3-day holders exit 05:00, re-entry from 09:00) — https://ib.eplus.jp/fujirock2025",
+    "Kyunghyang Shinmun 2026-07-30, 2026 Incheon Pentaport: entry routes split into two to reduce waiting — https://www.khan.co.kr/article/202607300957001",
+    "Trip.com blog: 2026 Pentaport entry notes (mobile ticket + ID, no proxy wristband pickup) — https://kr.trip.com/blog/incheon-festival/",
+    "Financial News 2025-09-26, 2025 Busan International Rock Festival (stages, daily schedule) — https://www.fnnews.com/news/202509261925182963",
+    "ProSoundWeb: festival changeovers often allow only a line check — https://www.prosoundweb.com/?p=36647",
+    "FestivalPro: managing rapid artist changeovers (artist advance, key staff) — https://festivalpro.com/festival-management/2012/news/2022/7/28/Managing-Rapid-Artist-Changeovers-for-Music-Festival-Stages.html",
+    "Shambala Festival 2025 artist info (check-in 3 h before show, ~30 min changeovers) — https://www.shambalafestival.org/wp-content/uploads/SH25_Artist-Info-2025.pdf",
+    "Ministry of the Interior and Safety (KR) crowd-safety guideline 2024 — https://cse.snu.ac.kr/api/v1/file/1730252035876_%5B%EB%B6%99%EC%9E%843%5D%20240905%20%EB%8B%A4%EC%A4%91%EC%9A%B4%EC%A7%91%EC%9D%B8%ED%8C%8C%EC%82%AC%EA%B3%A0%20%EC%95%88%EC%A0%84%EA%B4%80%EB%A6%AC%20%EA%B0%80%EC%9D%B4%EB%93%9C%EB%9D%BC%EC%9D%B8(%EB%B0%B0%ED%8F%AC%EC%9A%A9).pdf"
+  ],
+  "assumptions": [
+    "Synthetic dataset. Not an operating record of Pentaport, Busan International Rock Festival, Fuji Rock or any real event.",
+    "Fictional festival DFO26: 3 days (2026-08-07..09), stages MAIN/RIVER/CLUB, 99 performances; each stage case runs from this performance's Stage Handover start to Performance End.",
+    "Changeovers include a Line Check only for band acts; DJ/playback sets skip it, and band acts skip it with p=0.6 when Stage Setup ends inside the compressed-changeover threshold. Headliner full soundchecks happen earlier in the day and are outside the stage case boundary.",
+    "Stage Setup cannot complete before all linked equipment requests are Equipment Ready plus 2-5 min install time.",
+    "Technical Check failure probability = 0.08 base + 0.10 complex setup + 0.12 skipped Line Check + 0.08 linked equipment substituted/reworked; Technical Recheck fails again with p=0.20 (max 3 loops).",
+    "Stage crews work two overlapping shifts (10:00-17:30, 16:00-24:00); the first handover taken by the incoming Stage Manager includes a 5-15 min shift-change briefing.",
+    "Audience = complete record of one secondary entrance (North Gate) during 12:00-14:00 on D1 (280 attempts) and D2 (320 attempts); not total festival attendance.",
+    "Ticket Verification is ONE pooled FCFS service station: a single serpentine queue feeds 3 identical staffed lanes (gate_id NG-L1..L3), one qualified Lane Checker per lane, lanes open 12:00. baseline_gate_count = 3 is the staffed lane count, not the number of distinct gate_id values.",
+    "Join Entry Queue is recorded when the attendee enters the serpentine; reaching a lane takes 6-15 s walking time, so the observed queue wait includes walking time that the engine's pooled model does not represent.",
+    "Ticket Verification = first entry: mobile-ticket QR scan + photo-ID match + wristband fitting by the lane checker (lognormal median general 40 s, VIP 34 s); re-entry / multi-day holders: wristband scan only (median 9 s). Scan failure (general 7%, VIP 4%, re-entry 3%) is resolved off-lane at the Ticket Support desk (Manual Ticket Check) and does not block the lane.",
+    "Downstream stations (Ticket Support x2, Wristband Steward x1, Security Screener x4, Security Supervisor x1) are separate FCFS pools; they are NOT part of the modeled service station.",
+    "Equipment requests are day-of backline dispatch requests (house backline pool with limited assets per type); 15% are late requests 35-90 min before required_ready_at; substitutes come from an alternative/rental pool (ALT-*).",
+    "required_ready_at = planned changeover start of the linked performance (scheduled_start - planned changeover).",
+    "Resource identities are explicit resource_id values; no person works in more than one process. Utilization requires resource_shifts.csv, which the current engine does not ingest.",
+    "All durations, probabilities and arrival profiles are modeling assumptions fixed before generation; results were not tuned by changing the seed."
+  ]
+}

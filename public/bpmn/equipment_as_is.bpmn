@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_EquipmentAsIs" targetNamespace="https://processpilot.example/festival/EquipmentAsIs" exporter="generate_festival_logs.py" exporterVersion="1.0.0">
+  <bpmn:collaboration id="Collaboration_EquipmentAsIs">
+    <bpmn:participant id="Participant_EquipmentAsIs" name="Equipment &amp; Technical Readiness — per equipment request (As-is)" processRef="Process_EquipmentAsIs"/>
+    <bpmn:participant id="Participant_Artist" name="Artist / Tour Management (external)"/>
+    <bpmn:participant id="Participant_Stage" name="Stage &amp; Technical Operations (see stage_as_is.bpmn)"/>
+    <bpmn:messageFlow id="MsgFlow_Rider" name="Technical rider / backline request" sourceRef="Participant_Artist" targetRef="Task_EquipmentRequested"/>
+    <bpmn:messageFlow id="MsgFlow_ReadyNotice" name="Equipment Ready notice" sourceRef="Task_EquipmentReady" targetRef="Participant_Stage"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_EquipmentAsIs" name="Equipment &amp; Technical Readiness (As-is)" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_EquipmentAsIs">
+      <bpmn:lane id="Lane_Coordinator" name="Production Coordinator">
+        <bpmn:flowNodeRef>Start_Need</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EquipmentRequested</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_EquipmentManager" name="Equipment Manager">
+        <bpmn:flowNodeRef>Task_AvailabilityCheck</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_Available</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SubstituteSearch</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_AllocMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EquipmentAllocation</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Logistics" name="Logistics Crew">
+        <bpmn:flowNodeRef>Task_EquipmentTransport</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_QC" name="Backline QC Technician">
+        <bpmn:flowNodeRef>Gw_InspectMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PreUseInspection</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_InspectionPassed</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_InspectionRework</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EquipmentReady</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Ready</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Need" name="Backline need for a performance">
+      <bpmn:outgoing>Flow_E01</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_EquipmentRequested" name="Equipment Requested">
+      <bpmn:incoming>Flow_E01</bpmn:incoming>
+      <bpmn:outgoing>Flow_E02</bpmn:outgoing>
+      <bpmn:property id="Property_Task_EquipmentRequested" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="DIA_DataObject_Rider_Task_EquipmentRequested">
+        <bpmn:sourceRef>DataObject_Rider</bpmn:sourceRef>
+        <bpmn:targetRef>Property_Task_EquipmentRequested</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_AvailabilityCheck" name="Availability Check">
+      <bpmn:incoming>Flow_E02</bpmn:incoming>
+      <bpmn:outgoing>Flow_E03</bpmn:outgoing>
+      <bpmn:property id="Property_Task_AvailabilityCheck" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="DIA_DataObject_AssetRegister_Task_AvailabilityCheck">
+        <bpmn:sourceRef>DataObject_AssetRegister</bpmn:sourceRef>
+        <bpmn:targetRef>Property_Task_AvailabilityCheck</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gw_Available" name="Requested model free for the window?">
+      <bpmn:incoming>Flow_E03</bpmn:incoming>
+      <bpmn:outgoing>Flow_E04</bpmn:outgoing>
+      <bpmn:outgoing>Flow_E05</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_SubstituteSearch" name="Substitute Search">
+      <bpmn:incoming>Flow_E05</bpmn:incoming>
+      <bpmn:outgoing>Flow_E06</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gw_AllocMerge" name="">
+      <bpmn:incoming>Flow_E04</bpmn:incoming>
+      <bpmn:incoming>Flow_E06</bpmn:incoming>
+      <bpmn:outgoing>Flow_E07</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_EquipmentAllocation" name="Equipment Allocation">
+      <bpmn:incoming>Flow_E07</bpmn:incoming>
+      <bpmn:outgoing>Flow_E08</bpmn:outgoing>
+      <bpmn:dataOutputAssociation id="DOA_Task_EquipmentAllocation_DataObject_AllocationRecord">
+        <bpmn:targetRef>DataObject_AllocationRecord</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:userTask>
+    <bpmn:manualTask id="Task_EquipmentTransport" name="Equipment Transport">
+      <bpmn:incoming>Flow_E08</bpmn:incoming>
+      <bpmn:outgoing>Flow_E09</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:exclusiveGateway id="Gw_InspectMerge" name="">
+      <bpmn:incoming>Flow_E09</bpmn:incoming>
+      <bpmn:incoming>Flow_E14</bpmn:incoming>
+      <bpmn:outgoing>Flow_E10</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:manualTask id="Task_PreUseInspection" name="Pre-use Inspection">
+      <bpmn:incoming>Flow_E10</bpmn:incoming>
+      <bpmn:outgoing>Flow_E11</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:exclusiveGateway id="Gw_InspectionPassed" name="Inspection passed?">
+      <bpmn:incoming>Flow_E11</bpmn:incoming>
+      <bpmn:outgoing>Flow_E12</bpmn:outgoing>
+      <bpmn:outgoing>Flow_E13</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:manualTask id="Task_InspectionRework" name="Inspection Rework">
+      <bpmn:incoming>Flow_E13</bpmn:incoming>
+      <bpmn:outgoing>Flow_E14</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:sendTask id="Task_EquipmentReady" name="Equipment Ready">
+      <bpmn:incoming>Flow_E12</bpmn:incoming>
+      <bpmn:outgoing>Flow_E15</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_Ready" name="Equipment ready at stage">
+      <bpmn:incoming>Flow_E15</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_E01" sourceRef="Start_Need" targetRef="Task_EquipmentRequested"/>
+    <bpmn:sequenceFlow id="Flow_E02" sourceRef="Task_EquipmentRequested" targetRef="Task_AvailabilityCheck"/>
+    <bpmn:sequenceFlow id="Flow_E03" sourceRef="Task_AvailabilityCheck" targetRef="Gw_Available"/>
+    <bpmn:sequenceFlow id="Flow_E04" name="yes" sourceRef="Gw_Available" targetRef="Gw_AllocMerge"/>
+    <bpmn:sequenceFlow id="Flow_E05" name="no" sourceRef="Gw_Available" targetRef="Task_SubstituteSearch"/>
+    <bpmn:sequenceFlow id="Flow_E06" sourceRef="Task_SubstituteSearch" targetRef="Gw_AllocMerge"/>
+    <bpmn:sequenceFlow id="Flow_E07" sourceRef="Gw_AllocMerge" targetRef="Task_EquipmentAllocation"/>
+    <bpmn:sequenceFlow id="Flow_E08" sourceRef="Task_EquipmentAllocation" targetRef="Task_EquipmentTransport"/>
+    <bpmn:sequenceFlow id="Flow_E09" sourceRef="Task_EquipmentTransport" targetRef="Gw_InspectMerge"/>
+    <bpmn:sequenceFlow id="Flow_E10" sourceRef="Gw_InspectMerge" targetRef="Task_PreUseInspection"/>
+    <bpmn:sequenceFlow id="Flow_E11" sourceRef="Task_PreUseInspection" targetRef="Gw_InspectionPassed"/>
+    <bpmn:sequenceFlow id="Flow_E12" name="yes" sourceRef="Gw_InspectionPassed" targetRef="Task_EquipmentReady"/>
+    <bpmn:sequenceFlow id="Flow_E13" name="no" sourceRef="Gw_InspectionPassed" targetRef="Task_InspectionRework"/>
+    <bpmn:sequenceFlow id="Flow_E14" sourceRef="Task_InspectionRework" targetRef="Gw_InspectMerge"/>
+    <bpmn:sequenceFlow id="Flow_E15" sourceRef="Task_EquipmentReady" targetRef="End_Ready"/>
+    <bpmn:dataObject id="DataObject_DataObject_AssetRegister"/>
+    <bpmn:dataObjectReference id="DataObject_AssetRegister" name="Asset register (house backline)" dataObjectRef="DataObject_DataObject_AssetRegister"/>
+    <bpmn:dataObject id="DataObject_DataObject_AllocationRecord"/>
+    <bpmn:dataObjectReference id="DataObject_AllocationRecord" name="Allocation record (asset_id)" dataObjectRef="DataObject_DataObject_AllocationRecord"/>
+    <bpmn:dataObject id="DataObject_DataObject_Rider"/>
+    <bpmn:dataObjectReference id="DataObject_Rider" name="Technical rider / input list" dataObjectRef="DataObject_DataObject_Rider"/>
+    <bpmn:textAnnotation id="Note_Substitute">
+      <bpmn:text>Substitute = alternative model or rental asset (ALT-*) when the house pool is booked for the window or the rider model is unavailable.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_Note_Substitute" associationDirection="None" sourceRef="Task_SubstituteSearch" targetRef="Note_Substitute"/>
+    <bpmn:textAnnotation id="Note_Deadline">
+      <bpmn:text>On time = Equipment Ready &lt;= required_ready_at (planned changeover start of the linked performance, festival_id + performance_id).</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_Note_Deadline" associationDirection="None" sourceRef="Task_EquipmentReady" targetRef="Note_Deadline"/>
+    <bpmn:textAnnotation id="Note_Transport">
+      <bpmn:text>Transport time depends on destination stage (MAIN / RIVER / CLUB).</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_Note_Transport" associationDirection="None" sourceRef="Task_EquipmentTransport" targetRef="Note_Transport"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_EquipmentAsIs">
+    <bpmndi:BPMNPlane id="BPMNPlane_EquipmentAsIs" bpmnElement="Collaboration_EquipmentAsIs">
+      <bpmndi:BPMNShape id="Participant_EquipmentAsIs_di" bpmnElement="Participant_EquipmentAsIs" isHorizontal="true">
+        <dc:Bounds x="160" y="150" width="2252" height="690"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Coordinator_di" bpmnElement="Lane_Coordinator" isHorizontal="true">
+        <dc:Bounds x="190" y="150" width="2222" height="150"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_EquipmentManager_di" bpmnElement="Lane_EquipmentManager" isHorizontal="true">
+        <dc:Bounds x="190" y="300" width="2222" height="160"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Logistics_di" bpmnElement="Lane_Logistics" isHorizontal="true">
+        <dc:Bounds x="190" y="460" width="2222" height="150"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_QC_di" bpmnElement="Lane_QC" isHorizontal="true">
+        <dc:Bounds x="190" y="610" width="2222" height="230"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Artist_di" bpmnElement="Participant_Artist" isHorizontal="true">
+        <dc:Bounds x="160" y="40" width="2252" height="60"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Stage_di" bpmnElement="Participant_Stage" isHorizontal="true">
+        <dc:Bounds x="160" y="890" width="2252" height="60"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Need_di" bpmnElement="Start_Need">
+        <dc:Bounds x="272" y="207" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="230" y="247" width="120" height="40"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_EquipmentRequested_di" bpmnElement="Task_EquipmentRequested">
+        <dc:Bounds x="390" y="185" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AvailabilityCheck_di" bpmnElement="Task_AvailabilityCheck">
+        <dc:Bounds x="555" y="340" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_Available_di" bpmnElement="Gw_Available" isMarkerVisible="true">
+        <dc:Bounds x="760" y="355" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="715" y="313" width="140" height="36"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SubstituteSearch_di" bpmnElement="Task_SubstituteSearch">
+        <dc:Bounds x="885" y="340" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_AllocMerge_di" bpmnElement="Gw_AllocMerge" isMarkerVisible="true">
+        <dc:Bounds x="1090" y="355" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_EquipmentAllocation_di" bpmnElement="Task_EquipmentAllocation">
+        <dc:Bounds x="1215" y="340" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_EquipmentTransport_di" bpmnElement="Task_EquipmentTransport">
+        <dc:Bounds x="1380" y="495" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_InspectMerge_di" bpmnElement="Gw_InspectMerge" isMarkerVisible="true">
+        <dc:Bounds x="1585" y="660" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PreUseInspection_di" bpmnElement="Task_PreUseInspection">
+        <dc:Bounds x="1710" y="645" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_InspectionPassed_di" bpmnElement="Gw_InspectionPassed" isMarkerVisible="true">
+        <dc:Bounds x="1915" y="660" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1870" y="618" width="140" height="36"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_InspectionRework_di" bpmnElement="Task_InspectionRework">
+        <dc:Bounds x="1875" y="735" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_EquipmentReady_di" bpmnElement="Task_EquipmentReady">
+        <dc:Bounds x="2040" y="645" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Ready_di" bpmnElement="End_Ready">
+        <dc:Bounds x="2252" y="667" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2210" y="707" width="120" height="40"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataObject_AssetRegister_di" bpmnElement="DataObject_AssetRegister">
+        <dc:Bounds x="477" y="355" width="36" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="435" y="408" width="120" height="28"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataObject_AllocationRecord_di" bpmnElement="DataObject_AllocationRecord">
+        <dc:Bounds x="1447" y="335" width="36" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1405" y="388" width="120" height="28"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataObject_Rider_di" bpmnElement="DataObject_Rider">
+        <dc:Bounds x="652" y="192" width="36" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="610" y="245" width="120" height="28"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Note_Substitute_di" bpmnElement="Note_Substitute">
+        <dc:Bounds x="767" y="505" width="300" height="60"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Note_Deadline_di" bpmnElement="Note_Deadline">
+        <dc:Bounds x="2124" y="752" width="260" height="70"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Note_Transport_di" bpmnElement="Note_Transport">
+        <dc:Bounds x="1724" y="513" width="300" height="44"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_E01_di" bpmnElement="Flow_E01">
+        <di:waypoint x="308" y="225"/>
+        <di:waypoint x="390" y="225"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E02_di" bpmnElement="Flow_E02">
+        <di:waypoint x="520" y="225"/>
+        <di:waypoint x="538" y="225"/>
+        <di:waypoint x="538" y="380"/>
+        <di:waypoint x="555" y="380"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E03_di" bpmnElement="Flow_E03">
+        <di:waypoint x="685" y="380"/>
+        <di:waypoint x="760" y="380"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E04_di" bpmnElement="Flow_E04">
+        <di:waypoint x="785" y="405"/>
+        <di:waypoint x="785" y="444"/>
+        <di:waypoint x="1115" y="444"/>
+        <di:waypoint x="1115" y="405"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="789" y="406" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E05_di" bpmnElement="Flow_E05">
+        <di:waypoint x="810" y="380"/>
+        <di:waypoint x="885" y="380"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="852" y="362" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E06_di" bpmnElement="Flow_E06">
+        <di:waypoint x="1015" y="380"/>
+        <di:waypoint x="1090" y="380"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E07_di" bpmnElement="Flow_E07">
+        <di:waypoint x="1140" y="380"/>
+        <di:waypoint x="1215" y="380"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E08_di" bpmnElement="Flow_E08">
+        <di:waypoint x="1345" y="380"/>
+        <di:waypoint x="1362" y="380"/>
+        <di:waypoint x="1362" y="535"/>
+        <di:waypoint x="1380" y="535"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E09_di" bpmnElement="Flow_E09">
+        <di:waypoint x="1510" y="535"/>
+        <di:waypoint x="1548" y="535"/>
+        <di:waypoint x="1548" y="685"/>
+        <di:waypoint x="1585" y="685"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E10_di" bpmnElement="Flow_E10">
+        <di:waypoint x="1635" y="685"/>
+        <di:waypoint x="1710" y="685"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E11_di" bpmnElement="Flow_E11">
+        <di:waypoint x="1840" y="685"/>
+        <di:waypoint x="1915" y="685"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E12_di" bpmnElement="Flow_E12">
+        <di:waypoint x="1965" y="685"/>
+        <di:waypoint x="2040" y="685"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2006" y="667" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E13_di" bpmnElement="Flow_E13">
+        <di:waypoint x="1940" y="710"/>
+        <di:waypoint x="1940" y="735"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1944" y="704" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E14_di" bpmnElement="Flow_E14">
+        <di:waypoint x="1875" y="775"/>
+        <di:waypoint x="1610" y="775"/>
+        <di:waypoint x="1610" y="710"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E15_di" bpmnElement="Flow_E15">
+        <di:waypoint x="2170" y="685"/>
+        <di:waypoint x="2252" y="685"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MsgFlow_Rider_di" bpmnElement="MsgFlow_Rider">
+        <di:waypoint x="455" y="100"/>
+        <di:waypoint x="455" y="185"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="461" y="108" width="150" height="28"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MsgFlow_ReadyNotice_di" bpmnElement="MsgFlow_ReadyNotice">
+        <di:waypoint x="2105" y="725"/>
+        <di:waypoint x="2105" y="890"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2111" y="733" width="150" height="28"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DIA_DataObject_AssetRegister_Task_AvailabilityCheck_di" bpmnElement="DIA_DataObject_AssetRegister_Task_AvailabilityCheck">
+        <di:waypoint x="513" y="380"/>
+        <di:waypoint x="555" y="380"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DOA_Task_EquipmentAllocation_DataObject_AllocationRecord_di" bpmnElement="DOA_Task_EquipmentAllocation_DataObject_AllocationRecord">
+        <di:waypoint x="1345" y="360"/>
+        <di:waypoint x="1447" y="360"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DIA_DataObject_Rider_Task_EquipmentRequested_di" bpmnElement="DIA_DataObject_Rider_Task_EquipmentRequested">
+        <di:waypoint x="652" y="217"/>
+        <di:waypoint x="520" y="217"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_Note_Substitute_di" bpmnElement="Association_Note_Substitute">
+        <di:waypoint x="950" y="420"/>
+        <di:waypoint x="950" y="505"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_Note_Deadline_di" bpmnElement="Association_Note_Deadline">
+        <di:waypoint x="2105" y="725"/>
+        <di:waypoint x="2134" y="752"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_Note_Transport_di" bpmnElement="Association_Note_Transport">
+        <di:waypoint x="1445" y="495"/>
+        <di:waypoint x="1724" y="535"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
