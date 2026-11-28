@@ -96,12 +96,12 @@ export function getGateInputs(traces: readonly Trace[], options: GateInputOption
   return { inputs, eligibleCases, exclusions };
 }
 
-export function audienceQueueEvidence(metrics: readonly Metric[]): Omit<Finding, 'id' | 'scope'> | undefined {
+export function audienceQueueEvidence(metrics: readonly Metric[]): (Omit<Finding, 'id' | 'scope'> & { definition: string }) | undefined {
   const wait = metrics.find(metric => metric.id === 'audience_queue_wait_mean');
   if (!wait || wait.value === null || wait.value <= 0) return undefined;
   return {
     metricId: wait.id, value: wait.value, unit: wait.unit, n: wait.n,
-    eligible: wait.eligible, caseKeys: wait.caseKeys,
+    eligible: wait.eligible, caseKeys: wait.caseKeys, definition: wait.definition,
     text: 'Audience cases with valid queue and verification timestamps show a positive mean queue wait.',
     proposal: 'Compare adding a staffed gate with the modeled baseline using the same arrivals and service demands.',
   };

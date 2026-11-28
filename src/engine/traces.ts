@@ -103,6 +103,15 @@ export function hasRework(
   return false;
 }
 
+export function hasRepeatedActivity(trace: Trace): boolean {
+  const seen = new Set<string>();
+  for (const { activity } of trace.sequence) {
+    if (seen.has(activity)) return true;
+    seen.add(activity);
+  }
+  return false;
+}
+
 export function buildCaseKey(processType: ProcessKey, caseId: string): string {
   return JSON.stringify([processType, caseId]);
 }

@@ -19,6 +19,13 @@ function decimal(value: number, extraPlaces = 0) {
   return { digits: BigInt(whole + fraction), places: fraction.length - Number(exponent) + extraPlaces };
 }
 
+// Scale decimal inputs before converting back to Number for the shared scheduler.
+export function scaleServiceSeconds(seconds: number, multiplier: number): number {
+  const duration = decimal(seconds);
+  const factor = decimal(multiplier);
+  return Number(`${duration.digits * factor.digits}e${-(duration.places + factor.places)}`);
+}
+
 export function simulateGateQueue(inputs: readonly GateInput[], gateCount: number): QueueResult {
   if (!Number.isInteger(gateCount) || gateCount < 1) {
     throw new RangeError('Gate count must be a positive integer.');

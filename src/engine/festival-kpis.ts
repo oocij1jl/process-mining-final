@@ -1,6 +1,10 @@
 import type { EventRow, FestivalKPIConfig, KPIContext, Metric, ThroughputBucket, Trace } from '../contracts';
 import { audienceTimeline } from './audience';
-import { parseTimestamp } from './ingestion';
+import {
+  equipmentDeadlineSource, indexStageCases, measureEquipmentReadiness, measureStageReadiness,
+  resolveEquipmentStage, selectLinkedEquipment, stageSetupStart,
+} from './festival-readiness';
+import type { StageIndex } from './festival-readiness';
 import { caseMetric } from './metrics';
 import { firstOccurrence, firstStart, hasRework, MINUTE_MS } from './traces';
 
@@ -10,38 +14,13 @@ function elapsedBetween(start?: EventRow, end?: EventRow): number | undefined {
   }
 }
 
-function caseAttribute(trace: Trace, field: string): string | undefined {
-  const values = new Set(trace.events.map(event => event.attrs[field]?.trim()).filter(Boolean));
-  if (values.size === 1) return values.values().next().value;
+function onTimeValue(onTime: boolean | undefined): number | undefined {
+  return onTime === undefined ? undefined : Number(onTime);
 }
 
-function deadlineAttribute(trace: Trace, field: string): number | undefined {
-  const values = new Set(trace.events.map(event => event.attrs[field]?.trim()).filter(Boolean).map(value => parseTimestamp(value)));
-  if (values.size === 1) return values.values().next().value;
-}
-
-function onTime(event: EventRow | undefined, deadline: number | undefined): number | undefined {
-  if (event && deadline !== undefined) return Number(event.timestampMs <= deadline);
-}
-
-function performanceLink(trace: Trace): string | undefined {
-  const festival = caseAttribute(trace, 'festival_id');
-  const performance = caseAttribute(trace, 'performance_id');
-  if (festival && performance) return JSON.stringify([festival, performance]);
-}
-
-function stageLinks(traces: readonly Trace[]): Map<string, Trace | null> {
-  const links = new Map<string, Trace | null>();
-  for (const trace of traces) {
-    if (trace.processType !== 'stage') continue;
-    const key = performanceLink(trace);
-    if (key) links.set(key, links.has(key) ? null : trace);
-  }
-  return links;
-}
-
-function equipmentReadiness(traces: readonly Trace[], config: FestivalKPIConfig, stages: Map<string, Trace | null>): Metric {
-  const linkedDeadline = config.equipmentDeadline === 'linked_stage_setup_start';
+function equipmentReadiness(traces: readonly Trace[], config: FestivalKPIConfig, stages: StageIndex | undefined): Metric {
+  const source = equipmentDeadlineSource(config);
+  const linkedDeadline = source === 'linked_stage_setup_start';
   return caseMetric(
     'equipment_on_time_rate', '%',
     linkedDeadline ? 'Equipment Ready at or before the linked Stage Setup start.'
@@ -49,11 +28,8 @@ function equipmentReadiness(traces: readonly Trace[], config: FestivalKPIConfig,
     linkedDeadline ? 'No equipment cases have both readiness and an unambiguous linked Stage Setup start.'
       : 'No equipment cases have both readiness and a valid required_ready_at deadline.',
     traces, 'rate', trace => {
-      const linkedStage = stages.get(performanceLink(trace) ?? '');
-      const deadline = linkedDeadline
-        ? (linkedStage ? firstStart(linkedStage, 'Stage Setup')?.timestampMs : undefined)
-        : deadlineAttribute(trace, 'required_ready_at');
-      return onTime(firstOccurrence(trace, 'Equipment Ready'), deadline);
+      const setup = linkedDeadline ? stageSetupStart(resolveEquipmentStage(trace, stages).stage) : undefined;
+      return onTimeValue(measureEquipmentReadiness(trace, source, setup).onTime);
     },
   );
 }
@@ -73,7 +49,7 @@ function stageKPIs(traces: readonly Trace[], config: FestivalKPIConfig): Metric[
     caseMetric(
       'stage_on_time_rate', '%', 'Stage Ready at or before scheduled_start among cases with both timestamps.',
       'No stage cases have both readiness and a valid scheduled_start.', traces, 'rate',
-      trace => onTime(firstOccurrence(trace, 'Stage Ready'), deadlineAttribute(trace, 'scheduled_start')),
+      trace => onTimeValue(measureStageReadiness(trace).onTime),
     ),
     caseMetric(
       'stage_recheck_rate', '%', 'Cases with Technical Recheck or repeated configured checks among discovered stage cases.',
@@ -82,16 +58,15 @@ function stageKPIs(traces: readonly Trace[], config: FestivalKPIConfig): Metric[
     ),
   ];
   if (config.linkedEquipmentTraces) {
-    const stages = stageLinks(traces);
-    const linkedEquipment = config.linkedEquipmentTraces.filter(trace =>
-      trace.processType === 'equipment' && stages.get(performanceLink(trace) ?? ''));
+    const stages = indexStageCases(traces);
+    const linkedEquipment = selectLinkedEquipment(config.linkedEquipmentTraces, stages);
     metrics.push(equipmentReadiness(linkedEquipment, config, stages));
   }
   return metrics;
 }
 
 function equipmentKPIs(traces: readonly Trace[], config: FestivalKPIConfig): Metric[] {
-  const stages = stageLinks(config.linkedStageTraces ?? []);
+  const stages = config.linkedStageTraces === undefined ? undefined : indexStageCases(config.linkedStageTraces);
   return [
     caseMetric(
       'equipment_lead_time_mean', 'min', 'Mean elapsed time from Equipment Requested to Equipment Ready.',
@@ -113,8 +88,7 @@ function equipmentKPIs(traces: readonly Trace[], config: FestivalKPIConfig): Met
       'equipment_unmatched_performance_count', 'cases',
       'Requests without an unambiguous stage match on festival_id and performance_id.',
       'Both equipment cases and the linked stage selection are required.', traces, 'count',
-      trace => config.linkedStageTraces
-        ? Number(!stages.get(performanceLink(trace) ?? '')) : undefined,
+      trace => stages === undefined ? undefined : Number(resolveEquipmentStage(trace, stages).linkStatus !== 'linked'),
     ),
   ];
 }
@@ -125,7 +99,7 @@ function entryThroughput(
   eligible: number,
   config?: KPIContext['throughput'],
 ): Metric {
-  const base = { id: 'audience_throughput', unit: 'cases/bucket', eligible };
+  const base = { id: 'audience_throughput', unit: 'cases/bucket', eligible, problemCaseKeys: { min: null, max: null } };
   const widthMs = (config?.bucketMinutes ?? 0) * MINUTE_MS;
   if (!config || !Number.isSafeInteger(widthMs) || widthMs <= 0 || !Number.isSafeInteger(config.anchorMs)) {
     return {

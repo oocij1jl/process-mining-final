@@ -1,4 +1,5 @@
 import type { KPIContext, Metric, Target, TargetEvaluation, Trace } from '../contracts';
+import { getCaseThroughput } from './history';
 import { festivalKPIs } from './festival-kpis';
 import { caseMetric, compareMeasured } from './metrics';
 import { resourceKeyForTrace } from './resource-identity';
@@ -65,11 +66,13 @@ function shiftMetrics(traces: readonly Trace[], context: KPIContext): Metric[] {
       ...coverage, id: 'resource_utilization', unit: '%', value: n ? (clippedMs * 100) / availableMs : null,
       definition: 'Unioned busy time within unioned shifts divided by available shift time for resources with both types of evidence.',
       caseKeys: [...busyCases],
+      problemCaseKeys: { min: null, max: null },
     },
     {
       ...coverage, id: 'resource_out_of_shift_minutes', unit: 'min', value: n ? outOfShiftMs / MINUTE_MS : null,
       definition: 'Unioned measured busy minutes outside validated shifts across measured resources.',
       caseKeys: [...conflictCases],
+      problemCaseKeys: { min: null, max: n ? [...conflictCases] : null },
     },
   ];
 }
@@ -83,15 +86,16 @@ export function getKPIs(traces: readonly Trace[], context: KPIContext): Metric[]
     ),
     ...shiftMetrics(traces, context),
     ...festivalKPIs(traces, context),
+    ...(context.caseThroughput ? [getCaseThroughput(traces, context.caseThroughput)] : []),
   ];
 }
 
 export function evaluateTargets(metrics: readonly Metric[], targets: readonly Target[]): TargetEvaluation[] {
   const byId = new Map(metrics.map(metric => [metric.id, metric]));
-  return targets.map(({ metricId, unit, direction, value }) => {
+  return targets.map(({ metricId, unit, direction, value, definitionKey }) => {
     const metric = byId.get(metricId);
     if (!metric || metric.value === null || !Number.isFinite(metric.value) ||
-        !Number.isFinite(value) || unit !== metric.unit ||
+        !Number.isFinite(value) || unit !== metric.unit || definitionKey !== metric.definitionKey ||
         (direction !== 'max' && direction !== 'min')) return { metricId, status: 'unknown' };
     const order = compareMeasured(metric.value, value);
     const met = direction === 'max' ? order <= 0 : order >= 0;

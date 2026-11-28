@@ -1,0 +1,12 @@
+case_id,process_type,activity,timestamp,lifecycle,activity_instance_id,resource,resource_role,festival_id,performance_id,scheduled_start
+001,orders,A,2026-11-28T09:00:00+09:00,,,R1,Intake,,,
+001,orders,B,2026-11-28T00:00:00Z,start,01,R2,Review,,,
+001,orders,B,2026-11-28T00:02:00Z,complete,01,R2,Review,,,
+001,orders,A,2026-11-28T00:04:00Z,,,R3,Finish,,,
+공연01,stage,Stage Handover,2026-11-28T00:00:00Z,start,H1,Crew,Stage,F1,P1,2026-11-28T00:10:00Z
+공연01,stage,Stage Handover,2026-11-28T00:01:00Z,complete,H1,Crew,Stage,F1,P1,2026-11-28T00:10:00Z
+공연01,stage,Stage Ready,2026-11-28T00:09:00Z,,,Crew,Stage,F1,P1,2026-11-28T00:10:00Z
+001,audience,Join Entry Queue,2026-11-28T00:00:00Z,,,Lobby,,F1,,
+001,audience,Entry Complete,2026-11-28T00:01:00Z,,,Gate,,F1,,
+002,audience,Join Entry Queue,2026-11-28T00:05:00Z,,,Lobby,,F1,,
+002,audience,Entry Rejected,2026-11-28T00:06:00Z,,,Gate,,F1,,

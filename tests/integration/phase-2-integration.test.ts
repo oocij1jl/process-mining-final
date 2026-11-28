@@ -173,16 +173,18 @@ describe('Audience gate test log (hand-authored test data, Festival adapters exp
     expect(byId(engine.getKPIs(traces, kpiContext(traces, 'audience', 60, festival))).get('audience_throughput')).toMatchObject({ value: 8, n: 8 });
   });
 
-  test('a minimum-rate breach links the non-completed case, only when the original Metric objects are passed', () => {
+  test('a minimum-rate breach links the non-completed case through cloning and JSON', () => {
     const metrics = engine.getKPIs(traces, kpiContext(traces, 'audience', 60, festival));
     const target: Target = { metricId: 'audience_completed_rate', value: 95, unit: '%', direction: 'min' };
     const analysis = { scope: { ...scope, processKey: 'audience' }, traces, dfg: engine.buildDFG(traces), performance: engine.getPerformance(traces), resources: engine.getResourceAnalysis(traces) };
     const original = targetBreachFinding(engine.getFindings({ ...analysis, metrics, rework: festivalRework('audience', DEFAULT_FESTIVAL_SETTINGS) }, [target]), target);
     expect(original?.caseKeys).toEqual([key('audience', 'ENT009')]);
-    // Hazard documented by the engine fix report: a serialized copy loses the problem-case evidence.
     const cloned = targetBreachFinding(engine.getFindings({ ...analysis, metrics: structuredClone(metrics) }, [target]), target);
-    expect(cloned?.caseKeys).toHaveLength(8);
-    expect(cloned?.caseKeys).not.toContain(key('audience', 'ENT009'));
+    expect(cloned).toMatchObject({ rule: 'target_min', evidenceKind: 'problem_cases', caseKeys: [key('audience', 'ENT009')] });
+    const roundTripMetrics: typeof metrics = JSON.parse(JSON.stringify(metrics));
+    const roundTripFindings = engine.getFindings({ ...analysis, metrics: roundTripMetrics }, [target]);
+    expect(targetBreachFinding(JSON.parse(JSON.stringify(roundTripFindings)), target)).toEqual(cloned);
+    expect(byId(roundTripMetrics).get(target.metricId)?.caseKeys).toHaveLength(8);
   });
 
   test('gate vector: 8 observed 60 s services, ENT009 excluded; 3 → 4 → 5 gates match FCFS hand calculation', () => {

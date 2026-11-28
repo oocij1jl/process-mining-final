@@ -1,4 +1,4 @@
-import type { CaseKey, Metric, Target, Trace } from '../contracts';
+import type { CaseKey, Finding, Metric, Target, Trace } from '../contracts';
 
 interface Observation {
   caseKey: CaseKey;
@@ -8,10 +8,10 @@ interface Observation {
 type Observe = (trace: Trace) => number | undefined;
 type CaseMetricKind = 'mean' | 'count' | 'rate';
 
-const nonNumeratorCases = new WeakMap<Metric, CaseKey[]>();
-
-export function targetEvidence(metric: Metric, direction: Target['direction']): CaseKey[] {
-  return direction === 'min' ? nonNumeratorCases.get(metric) ?? metric.caseKeys : metric.caseKeys;
+export function targetEvidence(metric: Metric, direction: Target['direction']): Pick<Finding, 'caseKeys' | 'evidenceKind'> {
+  const problemCases = metric.problemCaseKeys?.[direction];
+  if (problemCases != null) return { caseKeys: problemCases, evidenceKind: 'problem_cases' };
+  return { caseKeys: metric.caseKeys, evidenceKind: metric.caseKeys.length ? 'metric_contributors' : 'unavailable' };
 }
 
 export function compareMeasured(measured: number, target: number): number {
@@ -37,16 +37,15 @@ export function caseMetric(
   }
   const n = observations.length;
   const sum = observations.reduce((total, observation) => total + observation.value, 0);
-  const metric: Metric = {
+  const caseKeys = observations.filter(observation => kind === 'mean' || observation.value > 0)
+    .map(observation => observation.caseKey);
+  return {
     id, unit, definition, n, eligible: traces.length,
     value: n ? (kind === 'count' ? sum : (sum * (kind === 'rate' ? 100 : 1)) / n) : null,
-    caseKeys: observations.filter(observation => kind === 'mean' || observation.value > 0)
-      .map(observation => observation.caseKey),
+    caseKeys,
+    problemCaseKeys: n && kind !== 'mean'
+      ? { min: observations.filter(item => item.value === 0).map(item => item.caseKey), max: caseKeys }
+      : { min: null, max: null },
     ...(n ? {} : { reason }),
   };
-  if (kind !== 'mean') {
-    nonNumeratorCases.set(metric, observations.filter(observation => observation.value === 0)
-      .map(observation => observation.caseKey));
-  }
-  return metric;
 }

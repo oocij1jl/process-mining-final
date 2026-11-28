@@ -64,7 +64,13 @@ export function getResourceAnalysis(traces: readonly Trace[]): ResourceAnalysis 
     activities: Map<string, number>;
     roles: Set<string>;
   }>();
-  const handoffs = new Map<string, { from: string; to: string; count: number; cases: Set<CaseKey> }>();
+  interface Evidence {
+    from: string;
+    to: string;
+    count: number;
+    cases: Set<CaseKey>;
+  }
+  const handoffs = new Map<string, Evidence & { pairs: Map<string, Evidence> }>();
   let knownRawEvents = 0;
   let totalRawEvents = 0;
   let knownInstances = 0;
@@ -101,10 +107,17 @@ export function getResourceAnalysis(traces: readonly Trace[]): ResourceAnalysis 
       const from = resourceKey(sequence[index - 1]);
       if (from === null || from === resource) continue;
       const key = JSON.stringify([from, resource]);
-      const handoff = handoffs.get(key) ?? { from, to: resource, count: 0, cases: new Set() };
+      const handoff = handoffs.get(key) ?? { from, to: resource, count: 0, cases: new Set(), pairs: new Map() };
       handoff.count++;
       handoff.cases.add(caseKey);
       handoffs.set(key, handoff);
+
+      const fromActivity = sequence[index - 1].activity;
+      const pairKey = JSON.stringify([fromActivity, activity]);
+      const pair = handoff.pairs.get(pairKey) ?? { from: fromActivity, to: activity, count: 0, cases: new Set() };
+      pair.count++;
+      pair.cases.add(caseKey);
+      handoff.pairs.set(pairKey, pair);
     }
   }
 
@@ -123,7 +136,10 @@ export function getResourceAnalysis(traces: readonly Trace[]): ResourceAnalysis 
         roles: [...summary.roles],
       };
     }),
-    handoffs: Array.from(handoffs.values(), ({ cases, ...handoff }) => ({ ...handoff, caseKeys: [...cases] })),
+    handoffs: Array.from(handoffs.values(), ({ cases, pairs, ...handoff }) => ({
+      ...handoff, caseKeys: [...cases],
+      activityPairs: Array.from(pairs.values(), ({ cases: pairCases, ...pair }) => ({ ...pair, caseKeys: [...pairCases] })),
+    })),
     knownRawEvents, totalRawEvents, knownInstances, totalInstances,
   };
 }
