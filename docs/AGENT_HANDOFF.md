@@ -1,5 +1,7 @@
 # Agent handoff v0.2.1
 
+Use the v0.3 handoff for current engine and frontend work, including the P0 CSV/XES slice. [v0.3 handoff](V03_CONTRACT.md#13-claude-handoff) · [File ownership](V03_CONTRACT.md#9-file-ownership-and-adapter-protocol)
+
 ## Before concurrent implementation
 Place these files in docs/ of the new repository. Keep the original KGU review local; the included copy has personal paths redacted. Do not copy KGU binaries or reference datasets into the project. Scaffold Vite once, install dependencies, initialize git, commit. Have Codex create shared contracts + exported engine signatures first; then create separate branches/worktrees for engine and UI. Both read REQUIREMENTS, SPEC, FUNCTIONAL_SPEC, DATA_SCHEMA, ENGINE_CONTRACT, TEST_PLAN. Keep a single owner for shared config/package lock. No code changes to KGU. No hard-coded analytical output.
 

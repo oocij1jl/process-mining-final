@@ -1,5 +1,5 @@
 # ProcessPilot — Architecture & Product Spec v0.2.1
-Date: 2026-11-27. Read REQUIREMENTS.md, FUNCTIONAL_SPEC.md, DATA_SCHEMA.md and ENGINE_CONTRACT.md together; v0.2.1 supersedes v0.1. No implementation yet.
+Date: 2026-11-27. This document describes the architecture leading into Phase 2. For v0.3, CSV and XES share normalized events and analysis. The v0.3 contract specifies workspace responsibilities, API integration and file ownership. [v0.3 product](V03_FINAL.md) · [v0.3 contract](V03_CONTRACT.md)
 
 ## Architecture
 React + TypeScript + Vite; Tailwind, PapaParse, React Flow with layout, Recharts, bpmn-js viewer, Vitest. Static HTTPS Netlify (`npm run build`, `dist`). No backend/auth/API keys. All input processed locally. Use regular React state/context + reducer; localStorage for small workspace config only (not large raw logs or sensitive uploads). Export workspace JSON for reproducibility; import workspace not required. Browser refresh may require re-uploading dataset; restore matching settings only. English-first UI for course; Korean development documentation allowed.

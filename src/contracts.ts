@@ -1,3 +1,5 @@
+import type { CaseThroughputOptions, HandoffActivityPair, TransitionPerformanceCoverage } from './v03-contracts';
+
 export type ProcessKey = string;
 export type CaseKey = string;
 export type Lifecycle = 'start' | 'complete' | 'point';
@@ -45,6 +47,8 @@ export interface ImportOptions {
   fixedOffset?: string;
   acceptExclusions: boolean;
   requireProcessType?: boolean;
+  /** v0.3 opt-in for Festival import rules. Omission uses the legacy inference. */
+  festivalValidation?: boolean;
 }
 
 export interface ValidationResult {
@@ -103,6 +107,8 @@ export interface KPIContext {
   festival?: FestivalKPIConfig;
   shifts?: readonly ResourceShift[];
   throughput?: { bucketMinutes: number; anchorMs: number };
+  /** v0.3 generic throughput, independent of the Festival audience series. */
+  caseThroughput?: CaseThroughputOptions;
 }
 
 export interface ThroughputBucket {
@@ -125,6 +131,10 @@ export interface Metric {
   reason?: string;
   caseKeys: CaseKey[];
   buckets?: ThroughputBucket[];
+  /** v0.3 directional evidence. Null means no case-level attribution for this direction. */
+  problemCaseKeys?: { min: CaseKey[] | null; max: CaseKey[] | null };
+  /** v0.3 identity of a configured metric definition. */
+  definitionKey?: string;
 }
 
 export interface Edge {
@@ -139,6 +149,8 @@ export interface DFG {
   edges: Edge[];
   starts: Record<string, number>;
   ends: Record<string, number>;
+  startCases?: Record<string, CaseKey[]>;
+  endCases?: Record<string, CaseKey[]>;
 }
 
 export interface Variant {
@@ -171,6 +183,7 @@ export interface PerformanceAnalysis {
   overlaps: number;
   matchedPairs: number;
   ambiguousPairs: number;
+  transitionCoverage?: TransitionPerformanceCoverage[];
 }
 
 export interface ResourceSummary {
@@ -190,6 +203,7 @@ export interface HandoffSummary {
   to: string;
   count: number;
   caseKeys: CaseKey[];
+  activityPairs?: HandoffActivityPair[];
 }
 
 export interface ResourceAnalysis {
@@ -214,6 +228,8 @@ export interface FindingAnalysis {
   };
 }
 
+export type FindingRule = 'slow_transition' | 'rework' | 'workload' | 'audience_queue' | 'target_max' | 'target_min';
+
 export interface Finding {
   id: string;
   scope: AnalysisScope;
@@ -227,6 +243,9 @@ export interface Finding {
   support?: 'low';
   text: string;
   proposal: string;
+  rule?: FindingRule;
+  definition?: string;
+  evidenceKind?: 'problem_cases' | 'metric_contributors' | 'unavailable';
 }
 
 export interface Target {
@@ -234,6 +253,7 @@ export interface Target {
   value: number;
   unit: string;
   direction: 'max' | 'min';
+  definitionKey?: string;
 }
 
 export interface TargetEvaluation {

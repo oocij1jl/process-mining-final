@@ -1,5 +1,5 @@
 # Engine contract v0.2.1 (TypeScript boundary)
-Codex owns the pure engine and shared types. Claude Code imports DTOs from `src/contracts.ts` and functions from `src/engine/index.ts`. Phase 0 establishes the callable signatures. Each engine function currently throws `EngineNotImplementedError` with its `functionName`. [Shared types](../src/contracts.ts) · [Engine entry point](../src/engine/index.ts)
+Codex owns the pure engine and shared types. All 12 functions below are implemented in Phase 2. The v0.3 contract specifies the additive DTOs, callable signatures, and planned changes to evidence, import and analysis. [Shared types](../src/contracts.ts) · [Engine entry point](../src/engine/index.ts) · [v0.3 contract](V03_CONTRACT.md)
 
 Engine inputs are read-only where the engine takes a collection. Durations use minutes, `GateInput.serviceSec` uses seconds, and timestamps use UTC epoch milliseconds. Unsupported metric values are `null` with coverage and a reason. Numeric outputs are finite. Arrays and evidence references have deterministic order. Case keys use JSON serialization of `[processType, caseId]`, and exact variant IDs use JSON serialization of the activity list.
 

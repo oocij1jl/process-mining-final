@@ -1,6 +1,8 @@
 # ProcessPilot — Requirements v0.2.1
 Date: 2026-11-27. Supersedes v0.1. Proposed implementation baseline, not completed software.
 
+The v0.3 product baseline promotes direct, bounded XES import to P0 alongside existing CSV support. The priority list below describes v0.2.1. [v0.3 product](V03_FINAL.md) · [XES import contract](V03_CONTRACT.md#3a-csv-and-xes-import-p0)
+
 ## Course requirements (not optional)
 - Week 10, p.42: unique real-world business process; description and BPMN; generated event log with generation explanation; AI-developed tool with process discovery; apply tool, analyze discovered process and propose improvements; 15–20-page PDF including AI use, dataset link and 2–3-minute YouTube demo link. Final report Week 15.
 - Week 11, pp.2,14: same project goal; GUI supporting as many of the six BPM lifecycle phases as possible. Examples on pp.17–21 are suggestions, not mandatory individual features.

@@ -1,6 +1,8 @@
 # Functional specification v0.2.1 — Input → Processing → Output → Interaction
 P0 unless labeled. All IDs correspond to REQUIREMENTS. Use actual computed data, explicit empty/unsupported/error states, consistent unit labels. Shared workspace rules in SPEC.md.
 
+The v0.3 product specification updates the screen responsibilities below. F01 covers CSV and bounded XES ingestion in v0.3. Discovery, KPI and cross-page evidence use the shared contract. [v0.3 product](V03_FINAL.md) · [v0.3 contract](V03_CONTRACT.md)
+
 | ID / Screen | Inputs | Processing | Outputs | User interaction / dependency | Acceptance |
 |---|---|---|---|---|---|
 | F01 Overview / Data | CSV or bundled sample, mapping, timezone/placeholder/exclusion settings | parse, preview, row validation, normalize, group, source order | row counts, accepted/excluded/issue list, sample preview, process choices, raw vs discovered counts | upload, map, confirm exclusions, select process/filter, download sample | upload different CSV updates all metrics; invalid rows never silently discarded; empty dataset handled |
