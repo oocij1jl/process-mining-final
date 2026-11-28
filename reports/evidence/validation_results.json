@@ -1,0 +1,1616 @@
+{
+  "checks": {
+    "C01": {
+      "title": "Same seed reproduces identical files",
+      "status": "PASS",
+      "detail": "all public/datasets + public/bpmn files byte-identical (SHA-256)"
+    },
+    "C02": {
+      "title": "Case and event counts",
+      "status": "PASS",
+      "detail": "cases {'equipment': 143, 'stage': 99, 'audience': 600}; events {'equipment': 1498, 'stage': 1043, 'audience': 3978}; total events 6519"
+    },
+    "C03": {
+      "title": "event_id unique",
+      "status": "PASS",
+      "detail": "6519 ids, duplicates 0"
+    },
+    "C04": {
+      "title": "Required fields present, constant CSV width",
+      "status": "PASS",
+      "detail": "missing required 0; staff events without resource_id 0 (audience Join/Entry Complete are unstaffed observations by design); row widths {23: 6520}"
+    },
+    "C05": {
+      "title": "Activity names match DATA_SCHEMA vocabulary",
+      "status": "PASS",
+      "detail": "unknown {}; unused vocabulary [('stage', []), ('audience', []), ('equipment', [])]"
+    },
+    "C06": {
+      "title": "ISO 8601 timestamps with explicit offset",
+      "status": "PASS",
+      "detail": "invalid 0; offsets Counter({'+09:00': 6519})"
+    },
+    "C07": {
+      "title": "Lifecycle start/complete matching by activity_instance_id",
+      "status": "PASS",
+      "detail": "lifecycle values {'complete': 2951, 'start': 2368, '': 1200}; ambiguous/invalid instances 0; starts without completion 0"
+    },
+    "C08": {
+      "title": "No impossible within-case ordering (no ties, boundaries respected)",
+      "status": "PASS",
+      "detail": "violations [] (n=0)"
+    },
+    "C09": {
+      "title": "No resource performs two activity instances at once",
+      "status": "PASS",
+      "detail": "54 staffed resources with intervals; overlaps 0 []"
+    },
+    "C10": {
+      "title": "Every staffed event inside a shift of resource_shifts.csv and assignable",
+      "status": "PASS",
+      "detail": "events outside shift 0; activity not assignable 0; resource_ids without shifts 0"
+    },
+    "C11": {
+      "title": "Stage<->Equipment link on festival_id + performance_id",
+      "status": "PASS",
+      "detail": "143 requests -> 81 distinct performances, unmatched/ambiguous 0; Stage Setup completed before linked Equipment Ready without fallback flag 0; documented fallbacks 3"
+    },
+    "C12": {
+      "title": "No overlapping performances / handovers on one stage",
+      "status": "PASS",
+      "detail": "9 stage-days, conflicts []"
+    },
+    "C13": {
+      "title": "Audience lanes: one pooled FCFS station, no lane overlap, work-conserving",
+      "status": "PASS",
+      "detail": "lanes ['NG-L1', 'NG-L2', 'NG-L3']; lane<->checker pairs [('NG-L1', 'Lane Checker 1'), ('NG-L2', 'Lane Checker 2'), ('NG-L3', 'Lane Checker 3')]; FCFS order violations 0; idle-lane-while-waiting violations 0; baseline_gate_count=3 (staffed lanes, not inferred from gate_id)"
+    },
+    "C21": {
+      "title": "Combined XES within V03 §3A limits, no unsafe XML",
+      "status": "PASS",
+      "detail": "3,365,990 B (<= 8,388,608), 6,519 events (<= 50,000), 842 traces (<= 10,000), 61,612 elements (<= 500,000), depth 4 (<= 32); DTD/entity/XInclude/stylesheet: False"
+    },
+    "C14": {
+      "title": "CSV and XES: same [process_type, case_id] set and event counts",
+      "status": "PASS",
+      "detail": "CSV cases 842 / XES traces 842; CSV events 6519 / XES events 6519; parser problems []"
+    },
+    "C15": {
+      "title": "CSV and XES: identical within-case order, timestamps, resources, lifecycle",
+      "status": "PASS",
+      "detail": "field mismatches 0; point events carry no lifecycle:transition; 'point' literal used: False"
+    },
+    "C16": {
+      "title": "Festival extension attributes preserved (trace inheritance + event scalars)",
+      "status": "PASS",
+      "detail": "mismatched fields {}; compared festival_id, performance_id, stage_id, gate_id, equipment_request_id, equipment_type, asset_id, scheduled_start, required_ready_at, ticket_type, issue_type, resource_id, resource_role, act_type, setup_profile"
+    },
+    "C17": {
+      "title": "Per-process XES files equal the extracted part of the combined XES",
+      "status": "PASS",
+      "detail": "problems []"
+    },
+    "C22": {
+      "title": "Independent CSV-vs-XES analysis equivalence (DFG, start/end, variants, handoffs, service)",
+      "status": "PASS",
+      "detail": "differences []. Independent re-implementation, NOT the ProcessPilot importXes/engine."
+    },
+    "C18": {
+      "title": "BPMN 2.0 XML structure, DI shapes/edges, sequence vs message flows, reachability",
+      "status": "PASS",
+      "detail": "4 files: every flow node/lane/data object/annotation has a BPMNShape, every flow/association has a BPMNEdge, message flows only between pools, all nodes on a start->end path, no overlapping shapes"
+    },
+    "C19": {
+      "title": "Every logged activity has an exact-name BPMN task (As-is), no extra task names",
+      "status": "PASS",
+      "detail": "problems []; ProcessPilot comparison-supported structure (task/start/end/XOR only): stage_as_is.bpmn=True, audience_as_is.bpmn=True, equipment_as_is.bpmn=True, audience_to_be.bpmn=True"
+    },
+    "C20": {
+      "title": "Manifest paths and keys valid for adapter.ts parseManifest",
+      "status": "PASS",
+      "detail": "problems []; keys ['dataset_id', 'name', 'source_type', 'csv', 'timezone', 'baseline_gate_count', 'service_activity', 'missing_resource_values', 'bpmn', 'bpmn_to_be', 'festival_config', 'generator', 'source_references', 'assumptions']; no new keys added (XES/completion are documented as proposals)"
+    },
+    "C23": {
+      "title": "Case-constant KPI attributes single-valued (scheduled_start, required_ready_at, IDs)",
+      "status": "PASS",
+      "detail": "problems []"
+    }
+  },
+  "analytics": {
+    "stage": {
+      "cases": 99,
+      "events": 1043,
+      "discovery_events": 670,
+      "dfg": {
+        "Stage Handover -> Stage Setup": 99,
+        "Stage Ready -> Performance Start": 99,
+        "Performance Start -> Performance End": 99,
+        "Technical Check -> Stage Ready": 88,
+        "Stage Setup -> Line Check": 50,
+        "Line Check -> Technical Check": 50,
+        "Stage Setup -> Technical Check": 49,
+        "Technical Troubleshooting -> Technical Recheck": 13,
+        "Technical Check -> Technical Troubleshooting": 11,
+        "Technical Recheck -> Stage Ready": 11,
+        "Technical Recheck -> Technical Troubleshooting": 2
+      },
+      "starts": {
+        "Stage Handover": 99
+      },
+      "ends": {
+        "Performance End": 99
+      },
+      "variants": [
+        {
+          "count": 45,
+          "share": 0.45454545454545453,
+          "sequence": [
+            "Stage Handover",
+            "Stage Setup",
+            "Technical Check",
+            "Stage Ready",
+            "Performance Start",
+            "Performance End"
+          ]
+        },
+        {
+          "count": 43,
+          "share": 0.43434343434343436,
+          "sequence": [
+            "Stage Handover",
+            "Stage Setup",
+            "Line Check",
+            "Technical Check",
+            "Stage Ready",
+            "Performance Start",
+            "Performance End"
+          ]
+        },
+        {
+          "count": 7,
+          "share": 0.0707070707070707,
+          "sequence": [
+            "Stage Handover",
+            "Stage Setup",
+            "Line Check",
+            "Technical Check",
+            "Technical Troubleshooting",
+            "Technical Recheck",
+            "Stage Ready",
+            "Performance Start",
+            "Performance End"
+          ]
+        },
+        {
+          "count": 3,
+          "share": 0.030303030303030304,
+          "sequence": [
+            "Stage Handover",
+            "Stage Setup",
+            "Technical Check",
+            "Technical Troubleshooting",
+            "Technical Recheck",
+            "Stage Ready",
+            "Performance Start",
+            "Performance End"
+          ]
+        },
+        {
+          "count": 1,
+          "share": 0.010101010101010102,
+          "sequence": [
+            "Stage Handover",
+            "Stage Setup",
+            "Technical Check",
+            "Technical Troubleshooting",
+            "Technical Recheck",
+            "Technical Troubleshooting",
+            "Technical Recheck",
+            "Technical Troubleshooting",
+            "Technical Recheck",
+            "Stage Ready",
+            "Performance Start",
+            "Performance End"
+          ]
+        }
+      ],
+      "service_mean_min": {
+        "Line Check": {
+          "n": 50,
+          "mean": 4.7556666666666665,
+          "p90": 6.616666666666666
+        },
+        "Stage Handover": {
+          "n": 99,
+          "mean": 4.676430976430977,
+          "p90": 12.283333333333333
+        },
+        "Stage Setup": {
+          "n": 99,
+          "mean": 8.868013468013467,
+          "p90": 15.45
+        },
+        "Technical Check": {
+          "n": 99,
+          "mean": 3.9245791245791244,
+          "p90": 5.666666666666667
+        },
+        "Technical Recheck": {
+          "n": 13,
+          "mean": 3.5243589743589743,
+          "p90": 4.65
+        },
+        "Technical Troubleshooting": {
+          "n": 13,
+          "mean": 6.544871794871795,
+          "p90": 8.2
+        }
+      },
+      "inter_event_gap_mean_min": {
+        "Stage Handover -> Stage Setup": {
+          "n": 99,
+          "mean": 9.524410774410775
+        },
+        "Stage Setup -> Technical Check": {
+          "n": 49,
+          "mean": 4.331972789115646
+        },
+        "Technical Check -> Stage Ready": {
+          "n": 88,
+          "mean": 0.6227272727272727
+        },
+        "Stage Ready -> Performance Start": {
+          "n": 99,
+          "mean": 6.800841750841751
+        },
+        "Performance Start -> Performance End": {
+          "n": 99,
+          "mean": 32.11380471380471
+        },
+        "Stage Setup -> Line Check": {
+          "n": 50,
+          "mean": 5.157
+        },
+        "Line Check -> Technical Check": {
+          "n": 50,
+          "mean": 4.3709999999999996
+        },
+        "Technical Check -> Technical Troubleshooting": {
+          "n": 11,
+          "mean": 7.331818181818182
+        },
+        "Technical Troubleshooting -> Technical Recheck": {
+          "n": 13,
+          "mean": 4.042307692307692
+        },
+        "Technical Recheck -> Stage Ready": {
+          "n": 11,
+          "mean": 0.5106060606060606
+        },
+        "Technical Recheck -> Technical Troubleshooting": {
+          "n": 2,
+          "mean": 6.758333333333333
+        }
+      },
+      "handoffs_total": 375,
+      "handoffs_top": [
+        {
+          "source": "CLUB FOH Engineer L",
+          "target": "CLUB Stage Manager L",
+          "count": 21
+        },
+        {
+          "source": "CLUB FOH Engineer E",
+          "target": "CLUB Stage Manager E",
+          "count": 20
+        },
+        {
+          "source": "RIVER FOH Engineer E",
+          "target": "RIVER Stage Manager E",
+          "count": 15
+        },
+        {
+          "source": "MAIN Monitor Engineer L",
+          "target": "MAIN FOH Engineer L",
+          "count": 13
+        },
+        {
+          "source": "RIVER FOH Engineer L",
+          "target": "RIVER Stage Manager L",
+          "count": 13
+        },
+        {
+          "source": "MAIN FOH Engineer E",
+          "target": "MAIN Stage Manager E",
+          "count": 12
+        },
+        {
+          "source": "MAIN FOH Engineer L",
+          "target": "MAIN Stage Manager L",
+          "count": 12
+        },
+        {
+          "source": "CLUB Stage Manager L",
+          "target": "CLUB Backline Tech L2",
+          "count": 11
+        },
+        {
+          "source": "RIVER Monitor Engineer E",
+          "target": "RIVER FOH Engineer E",
+          "count": 10
+        },
+        {
+          "source": "CLUB Stage Manager L",
+          "target": "CLUB Backline Tech L1",
+          "count": 10
+        },
+        {
+          "source": "RIVER Stage Manager E",
+          "target": "RIVER Backline Tech E1",
+          "count": 9
+        },
+        {
+          "source": "CLUB Stage Manager E",
+          "target": "CLUB Backline Tech E1",
+          "count": 9
+        }
+      ],
+      "handoff_activity_pairs": {
+        "Stage Handover -> Stage Setup": 99,
+        "Technical Check -> Stage Ready": 88,
+        "Stage Setup -> Line Check": 50,
+        "Line Check -> Technical Check": 50,
+        "Stage Setup -> Technical Check": 49,
+        "Technical Troubleshooting -> Technical Recheck": 13,
+        "Technical Check -> Technical Troubleshooting": 11,
+        "Technical Recheck -> Stage Ready": 11,
+        "Stage Ready -> Performance Start": 2,
+        "Technical Recheck -> Technical Troubleshooting": 2
+      },
+      "repeated_case_rate_pct": 1.0101010101010102
+    },
+    "audience": {
+      "cases": 600,
+      "events": 3978,
+      "discovery_events": 2589,
+      "dfg": {
+        "Join Entry Queue -> Ticket Verification": 600,
+        "Security Check -> Entry Complete": 555,
+        "Ticket Verification -> Security Check": 442,
+        "Wristband Check -> Security Check": 121,
+        "Ticket Verification -> Wristband Check": 121,
+        "Ticket Verification -> Manual Ticket Check": 37,
+        "Security Check -> Additional Screening": 34,
+        "Additional Screening -> Entry Complete": 32,
+        "Manual Ticket Check -> Security Check": 26,
+        "Manual Ticket Check -> Wristband Check": 8,
+        "Wristband Check -> Entry Rejected": 8,
+        "Manual Ticket Check -> Entry Rejected": 3,
+        "Additional Screening -> Entry Rejected": 2
+      },
+      "starts": {
+        "Join Entry Queue": 600
+      },
+      "ends": {
+        "Entry Complete": 587,
+        "Entry Rejected": 13
+      },
+      "variants": [
+        {
+          "count": 421,
+          "share": 0.7016666666666667,
+          "sequence": [
+            "Join Entry Queue",
+            "Ticket Verification",
+            "Security Check",
+            "Entry Complete"
+          ]
+        },
+        {
+          "count": 102,
+          "share": 0.17,
+          "sequence": [
+            "Join Entry Queue",
+            "Ticket Verification",
+            "Wristband Check",
+            "Security Check",
+            "Entry Complete"
+          ]
+        },
+        {
+          "count": 24,
+          "share": 0.04,
+          "sequence": [
+            "Join Entry Queue",
+            "Ticket Verification",
+            "Manual Ticket Check",
+            "Security Check",
+            "Entry Complete"
+          ]
+        },
+        {
+          "count": 20,
+          "share": 0.03333333333333333,
+          "sequence": [
+            "Join Entry Queue",
+            "Ticket Verification",
+            "Security Check",
+            "Additional Screening",
+            "Entry Complete"
+          ]
+        },
+        {
+          "count": 10,
+          "share": 0.016666666666666666,
+          "sequence": [
+            "Join Entry Queue",
+            "Ticket Verification",
+            "Wristband Check",
+            "Security Check",
+            "Additional Screening",
+            "Entry Complete"
+          ]
+        },
+        {
+          "count": 8,
+          "share": 0.013333333333333334,
+          "sequence": [
+            "Join Entry Queue",
+            "Ticket Verification",
+            "Manual Ticket Check",
+            "Wristband Check",
+            "Security Check",
+            "Entry Complete"
+          ]
+        },
+        {
+          "count": 8,
+          "share": 0.013333333333333334,
+          "sequence": [
+            "Join Entry Queue",
+            "Ticket Verification",
+            "Wristband Check",
+            "Entry Rejected"
+          ]
+        },
+        {
+          "count": 3,
+          "share": 0.005,
+          "sequence": [
+            "Join Entry Queue",
+            "Ticket Verification",
+            "Manual Ticket Check",
+            "Entry Rejected"
+          ]
+        },
+        {
+          "count": 2,
+          "share": 0.0033333333333333335,
+          "sequence": [
+            "Join Entry Queue",
+            "Ticket Verification",
+            "Manual Ticket Check",
+            "Security Check",
+            "Additional Screening",
+            "Entry Complete"
+          ]
+        },
+        {
+          "count": 1,
+          "share": 0.0016666666666666668,
+          "sequence": [
+            "Join Entry Queue",
+            "Ticket Verification",
+            "Security Check",
+            "Additional Screening",
+            "Entry Rejected"
+          ]
+        },
+        {
+          "count": 1,
+          "share": 0.0016666666666666668,
+          "sequence": [
+            "Join Entry Queue",
+            "Ticket Verification",
+            "Wristband Check",
+            "Security Check",
+            "Additional Screening",
+            "Entry Rejected"
+          ]
+        }
+      ],
+      "service_mean_min": {
+        "Additional Screening": {
+          "n": 34,
+          "mean": 1.7519607843137255,
+          "p90": 2.7666666666666666
+        },
+        "Manual Ticket Check": {
+          "n": 37,
+          "mean": 1.3522522522522522,
+          "p90": 2.033333333333333
+        },
+        "Security Check": {
+          "n": 589,
+          "mean": 0.3874646293152235,
+          "p90": 0.5666666666666667
+        },
+        "Ticket Verification": {
+          "n": 600,
+          "mean": 0.5801944444444445,
+          "p90": 0.9666666666666667
+        },
+        "Wristband Check": {
+          "n": 129,
+          "mean": 0.11989664082687339,
+          "p90": 0.16666666666666666
+        }
+      },
+      "inter_event_gap_mean_min": {
+        "Join Entry Queue -> Ticket Verification": {
+          "n": 600,
+          "mean": 2.0810555555555554
+        },
+        "Ticket Verification -> Manual Ticket Check": {
+          "n": 37,
+          "mean": 1.7477477477477477
+        },
+        "Manual Ticket Check -> Wristband Check": {
+          "n": 8,
+          "mean": 0.33958333333333335
+        },
+        "Wristband Check -> Security Check": {
+          "n": 121,
+          "mean": 0.7205234159779614
+        },
+        "Security Check -> Entry Complete": {
+          "n": 555,
+          "mean": 0.08381381381381381
+        },
+        "Ticket Verification -> Security Check": {
+          "n": 442,
+          "mean": 0.7179864253393665
+        },
+        "Ticket Verification -> Wristband Check": {
+          "n": 121,
+          "mean": 0.2921487603305785
+        },
+        "Security Check -> Additional Screening": {
+          "n": 34,
+          "mean": 2.856372549019608
+        },
+        "Additional Screening -> Entry Complete": {
+          "n": 32,
+          "mean": 0.078125
+        },
+        "Manual Ticket Check -> Security Check": {
+          "n": 26,
+          "mean": 0.6717948717948717
+        },
+        "Manual Ticket Check -> Entry Rejected": {
+          "n": 3,
+          "mean": 0.19999999999999998
+        },
+        "Wristband Check -> Entry Rejected": {
+          "n": 8,
+          "mean": 0.17291666666666666
+        },
+        "Additional Screening -> Entry Rejected": {
+          "n": 2,
+          "mean": 0.3
+        }
+      },
+      "handoffs_total": 789,
+      "handoffs_top": [
+        {
+          "source": "Lane Checker 3",
+          "target": "Security Screener 1",
+          "count": 46
+        },
+        {
+          "source": "Lane Checker 1",
+          "target": "Security Screener 4",
+          "count": 45
+        },
+        {
+          "source": "Lane Checker 2",
+          "target": "Wristband Steward 1",
+          "count": 45
+        },
+        {
+          "source": "Lane Checker 3",
+          "target": "Security Screener 3",
+          "count": 41
+        },
+        {
+          "source": "Lane Checker 2",
+          "target": "Security Screener 4",
+          "count": 40
+        },
+        {
+          "source": "Lane Checker 1",
+          "target": "Wristband Steward 1",
+          "count": 39
+        },
+        {
+          "source": "Lane Checker 2",
+          "target": "Security Screener 3",
+          "count": 39
+        },
+        {
+          "source": "Lane Checker 2",
+          "target": "Security Screener 2",
+          "count": 37
+        },
+        {
+          "source": "Lane Checker 3",
+          "target": "Wristband Steward 1",
+          "count": 37
+        },
+        {
+          "source": "Lane Checker 2",
+          "target": "Security Screener 1",
+          "count": 36
+        },
+        {
+          "source": "Lane Checker 1",
+          "target": "Security Screener 2",
+          "count": 36
+        },
+        {
+          "source": "Lane Checker 1",
+          "target": "Security Screener 1",
+          "count": 34
+        }
+      ],
+      "handoff_activity_pairs": {
+        "Ticket Verification -> Security Check": 442,
+        "Wristband Check -> Security Check": 121,
+        "Ticket Verification -> Wristband Check": 121,
+        "Ticket Verification -> Manual Ticket Check": 37,
+        "Security Check -> Additional Screening": 34,
+        "Manual Ticket Check -> Security Check": 26,
+        "Manual Ticket Check -> Wristband Check": 8
+      },
+      "repeated_case_rate_pct": 0.0
+    },
+    "equipment": {
+      "cases": 143,
+      "events": 1498,
+      "discovery_events": 892,
+      "dfg": {
+        "Equipment Requested -> Availability Check": 143,
+        "Equipment Allocation -> Equipment Transport": 143,
+        "Equipment Transport -> Pre-use Inspection": 143,
+        "Pre-use Inspection -> Equipment Ready": 143,
+        "Availability Check -> Equipment Allocation": 133,
+        "Pre-use Inspection -> Inspection Rework": 12,
+        "Inspection Rework -> Pre-use Inspection": 12,
+        "Availability Check -> Substitute Search": 10,
+        "Substitute Search -> Equipment Allocation": 10
+      },
+      "starts": {
+        "Equipment Requested": 143
+      },
+      "ends": {
+        "Equipment Ready": 143
+      },
+      "variants": [
+        {
+          "count": 126,
+          "share": 0.8811188811188811,
+          "sequence": [
+            "Equipment Requested",
+            "Availability Check",
+            "Equipment Allocation",
+            "Equipment Transport",
+            "Pre-use Inspection",
+            "Equipment Ready"
+          ]
+        },
+        {
+          "count": 6,
+          "share": 0.04195804195804196,
+          "sequence": [
+            "Equipment Requested",
+            "Availability Check",
+            "Equipment Allocation",
+            "Equipment Transport",
+            "Pre-use Inspection",
+            "Inspection Rework",
+            "Pre-use Inspection",
+            "Equipment Ready"
+          ]
+        },
+        {
+          "count": 6,
+          "share": 0.04195804195804196,
+          "sequence": [
+            "Equipment Requested",
+            "Availability Check",
+            "Substitute Search",
+            "Equipment Allocation",
+            "Equipment Transport",
+            "Pre-use Inspection",
+            "Equipment Ready"
+          ]
+        },
+        {
+          "count": 4,
+          "share": 0.027972027972027972,
+          "sequence": [
+            "Equipment Requested",
+            "Availability Check",
+            "Substitute Search",
+            "Equipment Allocation",
+            "Equipment Transport",
+            "Pre-use Inspection",
+            "Inspection Rework",
+            "Pre-use Inspection",
+            "Equipment Ready"
+          ]
+        },
+        {
+          "count": 1,
+          "share": 0.006993006993006993,
+          "sequence": [
+            "Equipment Requested",
+            "Availability Check",
+            "Equipment Allocation",
+            "Equipment Transport",
+            "Pre-use Inspection",
+            "Inspection Rework",
+            "Pre-use Inspection",
+            "Inspection Rework",
+            "Pre-use Inspection",
+            "Equipment Ready"
+          ]
+        }
+      ],
+      "service_mean_min": {
+        "Availability Check": {
+          "n": 143,
+          "mean": 7.077505827505828,
+          "p90": 10.8
+        },
+        "Equipment Allocation": {
+          "n": 143,
+          "mean": 5.454428904428904,
+          "p90": 7.5
+        },
+        "Equipment Transport": {
+          "n": 143,
+          "mean": 14.47937062937063,
+          "p90": 22.516666666666666
+        },
+        "Inspection Rework": {
+          "n": 12,
+          "mean": 14.244444444444445,
+          "p90": 22.783333333333335
+        },
+        "Pre-use Inspection": {
+          "n": 155,
+          "mean": 8.973333333333333,
+          "p90": 12.95
+        },
+        "Substitute Search": {
+          "n": 10,
+          "mean": 21.241666666666667,
+          "p90": 29.633333333333333
+        }
+      },
+      "inter_event_gap_mean_min": {
+        "Equipment Requested -> Availability Check": {
+          "n": 143,
+          "mean": 19.436247086247086
+        },
+        "Availability Check -> Equipment Allocation": {
+          "n": 133,
+          "mean": 6.693107769423559
+        },
+        "Equipment Allocation -> Equipment Transport": {
+          "n": 143,
+          "mean": 21.784382284382286
+        },
+        "Equipment Transport -> Pre-use Inspection": {
+          "n": 143,
+          "mean": 14.180419580419581
+        },
+        "Pre-use Inspection -> Equipment Ready": {
+          "n": 143,
+          "mean": 0.9393939393939394
+        },
+        "Availability Check -> Substitute Search": {
+          "n": 10,
+          "mean": 23.058333333333334
+        },
+        "Substitute Search -> Equipment Allocation": {
+          "n": 10,
+          "mean": 6.97
+        },
+        "Pre-use Inspection -> Inspection Rework": {
+          "n": 12,
+          "mean": 15.584722222222222
+        },
+        "Inspection Rework -> Pre-use Inspection": {
+          "n": 12,
+          "mean": 8.11111111111111
+        }
+      },
+      "handoffs_total": 431,
+      "handoffs_top": [
+        {
+          "source": "Production Coordinator A",
+          "target": "Equipment Manager 1",
+          "count": 51
+        },
+        {
+          "source": "Production Coordinator A",
+          "target": "Equipment Manager 2",
+          "count": 51
+        },
+        {
+          "source": "Logistics Crew 1",
+          "target": "Backline QC Tech 2",
+          "count": 29
+        },
+        {
+          "source": "Production Coordinator B",
+          "target": "Equipment Manager 3",
+          "count": 28
+        },
+        {
+          "source": "Logistics Crew 2",
+          "target": "Backline QC Tech 1",
+          "count": 27
+        },
+        {
+          "source": "Equipment Manager 1",
+          "target": "Logistics Crew 2",
+          "count": 25
+        },
+        {
+          "source": "Equipment Manager 2",
+          "target": "Logistics Crew 1",
+          "count": 25
+        },
+        {
+          "source": "Equipment Manager 2",
+          "target": "Logistics Crew 2",
+          "count": 24
+        },
+        {
+          "source": "Equipment Manager 1",
+          "target": "Logistics Crew 1",
+          "count": 21
+        },
+        {
+          "source": "Logistics Crew 4",
+          "target": "Backline QC Tech 3",
+          "count": 20
+        },
+        {
+          "source": "Equipment Manager 3",
+          "target": "Logistics Crew 4",
+          "count": 19
+        },
+        {
+          "source": "Logistics Crew 1",
+          "target": "Backline QC Tech 1",
+          "count": 17
+        }
+      ],
+      "handoff_activity_pairs": {
+        "Equipment Requested -> Availability Check": 143,
+        "Equipment Allocation -> Equipment Transport": 143,
+        "Equipment Transport -> Pre-use Inspection": 143,
+        "Availability Check -> Equipment Allocation": 1,
+        "Pre-use Inspection -> Inspection Rework": 1
+      },
+      "repeated_case_rate_pct": 7.6923076923076925
+    }
+  },
+  "kpis": {
+    "stage": {
+      "cases": 99,
+      "prep_mean_min": 23.2493265993266,
+      "prep_median_min": 21.116666666666667,
+      "prep_p90_min": 38.1,
+      "ready_on_time_pct": 51.515151515151516,
+      "case_elapsed_mean_min": 62.16397306397306,
+      "recheck_case_rate_pct": 11.11111111111111,
+      "performance_start_delay_mean_min": 7.2786195286195285,
+      "performance_start_delay_p90_min": 22.266666666666666,
+      "ready_minus_scheduled_median_min": -0.6,
+      "delay_propagation_corr_prev_to_next": 0.6200514768914572,
+      "first_slot_delay_mean_min": 0.7944444444444444,
+      "prep_by_group": {
+        "without Line Check": {
+          "n": 49,
+          "mean": 19.9187074829932
+        },
+        "with Line Check": {
+          "n": 50,
+          "mean": 26.513333333333332
+        },
+        "with troubleshooting": {
+          "n": 11,
+          "mean": 42.06969696969697
+        }
+      },
+      "band_tc_failure_rate": {
+        "line_check_done": {
+          "n": 50,
+          "pct": 14.0
+        },
+        "line_check_skipped": {
+          "n": 22,
+          "pct": 4.545454545454546
+        }
+      },
+      "handover_shift_change": {
+        "n": 9,
+        "mean_min": 13.059259259259258
+      },
+      "handover_other": {
+        "n": 90,
+        "mean_min": 3.8381481481481483
+      },
+      "ready_on_time_by_equipment_link": {
+        "linked request, no substitution/rework": {
+          "n": 65,
+          "pct": 58.46153846153846
+        },
+        "no linked request": {
+          "n": 18,
+          "pct": 33.333333333333336
+        },
+        "equipment substituted/reworked": {
+          "n": 16,
+          "pct": 43.75
+        }
+      },
+      "by_stage": {
+        "MAIN": {
+          "n": 24,
+          "ready_on_time_pct": 70.83333333333334,
+          "start_delay_mean_min": 3.59375
+        },
+        "RIVER": {
+          "n": 33,
+          "ready_on_time_pct": 45.45454545454545,
+          "start_delay_mean_min": 9.65
+        },
+        "CLUB": {
+          "n": 42,
+          "ready_on_time_pct": 45.23809523809524,
+          "start_delay_mean_min": 7.521031746031746
+        }
+      }
+    },
+    "audience": {
+      "attempts": 600,
+      "observed_queue_wait_mean_min": 1.5008611111111112,
+      "observed_queue_wait_p95_min": 5.25,
+      "observed_queue_wait_max_min": 6.916666666666667,
+      "tv_service_mean_s": 34.81166666666667,
+      "outcomes": {
+        "Entry Complete": 587,
+        "Entry Rejected": 13
+      },
+      "rejection_rate_pct": 2.1666666666666665,
+      "manual_check_rate_pct": 6.166666666666667,
+      "entry_elapsed_mean_min": 3.2179727427597955,
+      "per_day": {
+        "D1": {
+          "n": 280,
+          "mean_wait_min": 2.1967857142857143,
+          "p95_wait_min": 6.1,
+          "max_wait_min": 6.916666666666667,
+          "mean_tv_service_s": 40.10357142857143,
+          "ticket_mix": {
+            "re-entry": 18,
+            "general": 237,
+            "vip": 25
+          }
+        },
+        "D2": {
+          "n": 320,
+          "mean_wait_min": 0.8919270833333334,
+          "p95_wait_min": 2.566666666666667,
+          "max_wait_min": 3.3666666666666667,
+          "mean_tv_service_s": 30.18125,
+          "ticket_mix": {
+            "vip": 24,
+            "general": 184,
+            "re-entry": 112
+          }
+        }
+      },
+      "by_ticket": {
+        "general": {
+          "n": 421,
+          "mean_tv_service_s": 42.712589073634206
+        },
+        "vip": {
+          "n": 49,
+          "mean_tv_service_s": 33.42857142857143
+        },
+        "re-entry": {
+          "n": 130,
+          "mean_tv_service_s": 9.746153846153845
+        }
+      },
+      "buckets_15min": [
+        {
+          "bucket": "D1 12:00",
+          "arrivals": 94,
+          "mean_wait_min": 2.797695035460993,
+          "max_wait_min": 6.766666666666667,
+          "mean_tv_service_s": 39.851063829787236,
+          "reentry_share_pct": 7.446808510638298
+        },
+        {
+          "bucket": "D1 12:15",
+          "arrivals": 51,
+          "mean_wait_min": 4.366013071895424,
+          "max_wait_min": 6.916666666666667,
+          "mean_tv_service_s": 38.80392156862745,
+          "reentry_share_pct": 7.8431372549019605
+        },
+        {
+          "bucket": "D1 12:30",
+          "arrivals": 58,
+          "mean_wait_min": 1.960344827586207,
+          "max_wait_min": 3.1666666666666665,
+          "mean_tv_service_s": 41.60344827586207,
+          "reentry_share_pct": 6.896551724137931
+        },
+        {
+          "bucket": "D1 12:45",
+          "arrivals": 25,
+          "mean_wait_min": 0.22333333333333333,
+          "max_wait_min": 0.6833333333333333,
+          "mean_tv_service_s": 42.32,
+          "reentry_share_pct": 0.0
+        },
+        {
+          "bucket": "D1 13:00",
+          "arrivals": 24,
+          "mean_wait_min": 0.19791666666666666,
+          "max_wait_min": 0.31666666666666665,
+          "mean_tv_service_s": 37.291666666666664,
+          "reentry_share_pct": 4.166666666666667
+        },
+        {
+          "bucket": "D1 13:15",
+          "arrivals": 6,
+          "mean_wait_min": 0.175,
+          "max_wait_min": 0.23333333333333334,
+          "mean_tv_service_s": 33.166666666666664,
+          "reentry_share_pct": 0.0
+        },
+        {
+          "bucket": "D1 13:30",
+          "arrivals": 12,
+          "mean_wait_min": 0.19722222222222222,
+          "max_wait_min": 0.25,
+          "mean_tv_service_s": 37.583333333333336,
+          "reentry_share_pct": 8.333333333333334
+        },
+        {
+          "bucket": "D1 13:45",
+          "arrivals": 10,
+          "mean_wait_min": 0.2,
+          "max_wait_min": 0.25,
+          "mean_tv_service_s": 48.8,
+          "reentry_share_pct": 10.0
+        },
+        {
+          "bucket": "D2 12:00",
+          "arrivals": 106,
+          "mean_wait_min": 1.3946540880503144,
+          "max_wait_min": 3.3666666666666667,
+          "mean_tv_service_s": 29.650943396226417,
+          "reentry_share_pct": 32.075471698113205
+        },
+        {
+          "bucket": "D2 12:15",
+          "arrivals": 68,
+          "mean_wait_min": 1.543872549019608,
+          "max_wait_min": 3.05,
+          "mean_tv_service_s": 29.176470588235293,
+          "reentry_share_pct": 38.23529411764706
+        },
+        {
+          "bucket": "D2 12:30",
+          "arrivals": 65,
+          "mean_wait_min": 0.2723076923076923,
+          "max_wait_min": 0.7833333333333333,
+          "mean_tv_service_s": 29.015384615384615,
+          "reentry_share_pct": 36.92307692307692
+        },
+        {
+          "bucket": "D2 12:45",
+          "arrivals": 30,
+          "mean_wait_min": 0.19111111111111112,
+          "max_wait_min": 0.48333333333333334,
+          "mean_tv_service_s": 34.93333333333333,
+          "reentry_share_pct": 33.333333333333336
+        },
+        {
+          "bucket": "D2 13:00",
+          "arrivals": 27,
+          "mean_wait_min": 0.16666666666666666,
+          "max_wait_min": 0.3333333333333333,
+          "mean_tv_service_s": 37.48148148148148,
+          "reentry_share_pct": 22.22222222222222
+        },
+        {
+          "bucket": "D2 13:15",
+          "arrivals": 8,
+          "mean_wait_min": 0.19375,
+          "max_wait_min": 0.25,
+          "mean_tv_service_s": 27.625,
+          "reentry_share_pct": 25.0
+        },
+        {
+          "bucket": "D2 13:30",
+          "arrivals": 9,
+          "mean_wait_min": 0.1962962962962963,
+          "max_wait_min": 0.25,
+          "mean_tv_service_s": 30.22222222222222,
+          "reentry_share_pct": 44.44444444444444
+        },
+        {
+          "bucket": "D2 13:45",
+          "arrivals": 7,
+          "mean_wait_min": 0.19285714285714287,
+          "max_wait_min": 0.25,
+          "mean_tv_service_s": 13.142857142857142,
+          "reentry_share_pct": 85.71428571428571
+        }
+      ],
+      "engine_equivalent_queue": {
+        "3": {
+          "servers": 3,
+          "n": 600,
+          "mean_wait_min": 1.328,
+          "p95_wait_min": 5.083333333333333,
+          "max_wait_min": 6.733333333333333,
+          "finish_elapsed_min": 1558.85,
+          "throughput_per_hour": 23.093947461269526
+        },
+        "4": {
+          "servers": 4,
+          "n": 600,
+          "mean_wait_min": 0.2708333333333333,
+          "p95_wait_min": 1.7,
+          "max_wait_min": 2.6,
+          "finish_elapsed_min": 1558.85,
+          "throughput_per_hour": 23.093947461269526
+        },
+        "5": {
+          "servers": 5,
+          "n": 600,
+          "mean_wait_min": 0.04841666666666666,
+          "p95_wait_min": 0.36666666666666664,
+          "max_wait_min": 0.85,
+          "finish_elapsed_min": 1558.85,
+          "throughput_per_hour": 23.093947461269526
+        }
+      },
+      "engine_equivalent_queue_by_day": {
+        "D1": {
+          "3": {
+            "servers": 3,
+            "n": 280,
+            "mean_wait_min": 2.023452380952381,
+            "p95_wait_min": 5.9,
+            "max_wait_min": 6.733333333333333,
+            "finish_elapsed_min": 120.1,
+            "throughput_per_hour": 139.8834304746045
+          },
+          "4": {
+            "servers": 4,
+            "n": 280,
+            "mean_wait_min": 0.4541071428571428,
+            "p95_wait_min": 2.1,
+            "max_wait_min": 2.6,
+            "finish_elapsed_min": 120.1,
+            "throughput_per_hour": 139.8834304746045
+          }
+        },
+        "D2": {
+          "3": {
+            "servers": 3,
+            "n": 320,
+            "mean_wait_min": 0.7194791666666667,
+            "p95_wait_min": 2.4166666666666665,
+            "max_wait_min": 3.1666666666666665,
+            "finish_elapsed_min": 119.28333333333333,
+            "throughput_per_hour": 160.9612966326673
+          },
+          "4": {
+            "servers": 4,
+            "n": 320,
+            "mean_wait_min": 0.11046874999999999,
+            "p95_wait_min": 0.7166666666666667,
+            "max_wait_min": 1.0166666666666666,
+            "finish_elapsed_min": 119.28333333333333,
+            "throughput_per_hour": 160.9612966326673
+          }
+        }
+      },
+      "structural_what_if_independent": {
+        "3 ticket lanes + 1 express lane": {
+          "ticket_station": {
+            "D1": {
+              "n": 262,
+              "mean_wait_min": 1.7909033078880408,
+              "p95_wait_min": 5.55,
+              "max_wait_min": 6.35
+            },
+            "D2": {
+              "n": 208,
+              "mean_wait_min": 0.3162660256410257,
+              "p95_wait_min": 1.35,
+              "max_wait_min": 1.95
+            }
+          },
+          "express_station": {
+            "D1": {
+              "n": 18,
+              "mean_wait_min": 0.03888888888888889,
+              "p95_wait_min": 0.4166666666666667,
+              "max_wait_min": 0.4166666666666667
+            },
+            "D2": {
+              "n": 112,
+              "mean_wait_min": 0.06488095238095239,
+              "p95_wait_min": 0.4166666666666667,
+              "max_wait_min": 0.6833333333333333
+            }
+          }
+        },
+        "4 ticket lanes + 1 express lane": {
+          "ticket_station": {
+            "D1": {
+              "n": 262,
+              "mean_wait_min": 0.43587786259541983,
+              "p95_wait_min": 1.9666666666666666,
+              "max_wait_min": 2.5
+            },
+            "D2": {
+              "n": 208,
+              "mean_wait_min": 0.07099358974358976,
+              "p95_wait_min": 0.5,
+              "max_wait_min": 0.8166666666666667
+            }
+          },
+          "express_station": {
+            "D1": {
+              "n": 18,
+              "mean_wait_min": 0.03888888888888889,
+              "p95_wait_min": 0.4166666666666667,
+              "max_wait_min": 0.4166666666666667
+            },
+            "D2": {
+              "n": 112,
+              "mean_wait_min": 0.06488095238095239,
+              "p95_wait_min": 0.4166666666666667,
+              "max_wait_min": 0.6833333333333333
+            }
+          }
+        }
+      }
+    },
+    "equipment": {
+      "requests": 143,
+      "lead_time_mean_min": 66.65384615384616,
+      "lead_time_p90_min": 95.78333333333333,
+      "on_time_pct": 93.00699300699301,
+      "substitution_rate_pct": 6.993006993006993,
+      "inspection_rework_rate_pct": 7.6923076923076925,
+      "by_variant": {
+        "normal": {
+          "n": 126,
+          "lead_mean_min": 64.45145502645502,
+          "on_time_pct": 94.44444444444444
+        },
+        "substituted": {
+          "n": 10,
+          "lead_mean_min": 83.13333333333333,
+          "on_time_pct": 90.0
+        },
+        "inspection rework": {
+          "n": 7,
+          "lead_mean_min": 82.7547619047619,
+          "on_time_pct": 71.42857142857143
+        }
+      },
+      "on_time_by_request_notice": {
+        "< 120 min before required_ready_at": {
+          "n": 19,
+          "pct": 47.368421052631575
+        },
+        ">= 120 min": {
+          "n": 124,
+          "pct": 100
+        }
+      },
+      "on_time_by_stage": {
+        "RIVER": {
+          "n": 45,
+          "pct": 86.66666666666667
+        },
+        "MAIN": {
+          "n": 40,
+          "pct": 97.5
+        },
+        "CLUB": {
+          "n": 58,
+          "pct": 94.82758620689656
+        }
+      },
+      "linked_performances": 81
+    },
+    "utilization_independent": [
+      {
+        "process": "audience",
+        "role": "security_screener",
+        "people": 4,
+        "busy_h": 3.803611111111111,
+        "shift_h": 32.0,
+        "utilization_pct": 11.886284722222221
+      },
+      {
+        "process": "audience",
+        "role": "security_supervisor",
+        "people": 1,
+        "busy_h": 0.9927777777777776,
+        "shift_h": 8.0,
+        "utilization_pct": 12.409722222222221
+      },
+      {
+        "process": "audience",
+        "role": "ticket_checker",
+        "people": 3,
+        "busy_h": 5.801944444444443,
+        "shift_h": 24.0,
+        "utilization_pct": 24.17476851851851
+      },
+      {
+        "process": "audience",
+        "role": "ticket_supervisor",
+        "people": 2,
+        "busy_h": 0.8338888888888889,
+        "shift_h": 16.0,
+        "utilization_pct": 5.211805555555555
+      },
+      {
+        "process": "audience",
+        "role": "wristband_steward",
+        "people": 1,
+        "busy_h": 0.2577777777777777,
+        "shift_h": 8.0,
+        "utilization_pct": 3.2222222222222214
+      },
+      {
+        "process": "equipment",
+        "role": "backline_qc_tech",
+        "people": 3,
+        "busy_h": 26.029999999999994,
+        "shift_h": 81.0,
+        "utilization_pct": 32.1358024691358
+      },
+      {
+        "process": "equipment",
+        "role": "equipment_manager",
+        "people": 3,
+        "busy_h": 33.40805555555555,
+        "shift_h": 84.0,
+        "utilization_pct": 39.7714947089947
+      },
+      {
+        "process": "equipment",
+        "role": "logistics_crew",
+        "people": 4,
+        "busy_h": 34.509166666666665,
+        "shift_h": 114.0,
+        "utilization_pct": 30.271198830409354
+      },
+      {
+        "process": "equipment",
+        "role": "production_coordinator",
+        "people": 2,
+        "busy_h": 0.0,
+        "shift_h": 49.5,
+        "utilization_pct": 0.0
+      },
+      {
+        "process": "stage",
+        "role": "backline_tech",
+        "people": 12,
+        "busy_h": 15.039444444444445,
+        "shift_h": 279.0,
+        "utilization_pct": 5.390481879729192
+      },
+      {
+        "process": "stage",
+        "role": "foh_engineer",
+        "people": 6,
+        "busy_h": 7.239166666666666,
+        "shift_h": 139.5,
+        "utilization_pct": 5.18936678614098
+      },
+      {
+        "process": "stage",
+        "role": "lighting_operator",
+        "people": 3,
+        "busy_h": 0.43166666666666664,
+        "shift_h": 72.0,
+        "utilization_pct": 0.599537037037037
+      },
+      {
+        "process": "stage",
+        "role": "monitor_engineer",
+        "people": 6,
+        "busy_h": 4.542222222222222,
+        "shift_h": 139.5,
+        "utilization_pct": 3.2560732775786536
+      },
+      {
+        "process": "stage",
+        "role": "stage_manager",
+        "people": 6,
+        "busy_h": 7.71611111111111,
+        "shift_h": 139.5,
+        "utilization_pct": 5.531262445240939
+      }
+    ]
+  },
+  "xes_guard": {
+    "bytes": 3365990,
+    "elements": 61612,
+    "depth": 4,
+    "traces": 842,
+    "events": 6519,
+    "unsafe": false,
+    "root": "{http://www.xes-standard.org/}log",
+    "encoding_decl": true
+  },
+  "bpmn": {
+    "stage_as_is.bpmn": {
+      "process": "Process_StageAsIs",
+      "tasks": [
+        "Line Check",
+        "Performance End",
+        "Performance Start",
+        "Stage Handover",
+        "Stage Ready",
+        "Stage Setup",
+        "Technical Check",
+        "Technical Recheck",
+        "Technical Troubleshooting"
+      ],
+      "gateway_kinds": {
+        "startEvent": 1,
+        "userTask": 5,
+        "manualTask": 3,
+        "exclusiveGateway": 6,
+        "sendTask": 1,
+        "endEvent": 1
+      },
+      "tasks_not_in_vocab": [],
+      "vocab_not_in_tasks": [],
+      "lanes": 5,
+      "sequence_flows": 19,
+      "comparison_supported_structure": true,
+      "message_flows": 3,
+      "pools": 3
+    },
+    "audience_as_is.bpmn": {
+      "process": "Process_AudienceAsIs",
+      "tasks": [
+        "Additional Screening",
+        "Entry Complete",
+        "Entry Rejected",
+        "Join Entry Queue",
+        "Manual Ticket Check",
+        "Security Check",
+        "Ticket Verification",
+        "Wristband Check"
+      ],
+      "gateway_kinds": {
+        "startEvent": 1,
+        "receiveTask": 1,
+        "userTask": 3,
+        "exclusiveGateway": 12,
+        "manualTask": 3,
+        "serviceTask": 1,
+        "endEvent": 2
+      },
+      "tasks_not_in_vocab": [],
+      "vocab_not_in_tasks": [],
+      "lanes": 7,
+      "sequence_flows": 27,
+      "comparison_supported_structure": true,
+      "message_flows": 1,
+      "pools": 2
+    },
+    "equipment_as_is.bpmn": {
+      "process": "Process_EquipmentAsIs",
+      "tasks": [
+        "Availability Check",
+        "Equipment Allocation",
+        "Equipment Ready",
+        "Equipment Requested",
+        "Equipment Transport",
+        "Inspection Rework",
+        "Pre-use Inspection",
+        "Substitute Search"
+      ],
+      "gateway_kinds": {
+        "startEvent": 1,
+        "userTask": 4,
+        "exclusiveGateway": 4,
+        "manualTask": 3,
+        "sendTask": 1,
+        "endEvent": 1
+      },
+      "tasks_not_in_vocab": [],
+      "vocab_not_in_tasks": [],
+      "lanes": 4,
+      "sequence_flows": 15,
+      "comparison_supported_structure": true,
+      "message_flows": 2,
+      "pools": 3
+    },
+    "audience_to_be.bpmn": {
+      "process": "Process_AudienceToBe",
+      "tasks": [
+        "Additional Screening",
+        "Entry Complete",
+        "Entry Rejected",
+        "Join Entry Queue",
+        "Manual Ticket Check",
+        "Security Check",
+        "Ticket Verification",
+        "Wristband Check"
+      ],
+      "gateway_kinds": {
+        "startEvent": 1,
+        "receiveTask": 1,
+        "exclusiveGateway": 12,
+        "manualTask": 3,
+        "userTask": 3,
+        "serviceTask": 1,
+        "endEvent": 2
+      },
+      "tasks_not_in_vocab": [],
+      "vocab_not_in_tasks": [],
+      "lanes": 7,
+      "sequence_flows": 27,
+      "comparison_supported_structure": true,
+      "message_flows": 1,
+      "pools": 2
+    }
+  },
+  "generator": {
+    "version": "1.0.0",
+    "seed": 20261127
+  },
+  "completion_activities": {
+    "stage": [
+      "Performance End"
+    ],
+    "audience": [
+      "Entry Complete",
+      "Entry Rejected"
+    ],
+    "equipment": [
+      "Equipment Ready"
+    ]
+  }
+}

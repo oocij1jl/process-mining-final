@@ -1,4 +1,5 @@
 import type { GapSummary, PerformanceAnalysis, Trace } from '../contracts';
+import type { TransitionPerformanceCoverage } from '../v03-contracts';
 import { assertProcessScope, matchLifecycle, MINUTE_MS } from './traces';
 
 export function getPerformance(traces: readonly Trace[]): PerformanceAnalysis {
@@ -11,6 +12,7 @@ export function getPerformance(traces: readonly Trace[]): PerformanceAnalysis {
     n: number;
     cases: Set<string>;
   }>();
+  const coverage = new Map<string, TransitionPerformanceCoverage>();
   let matchedPairs = 0;
   let ambiguousPairs = 0;
   let overlaps = 0;
@@ -41,11 +43,22 @@ export function getPerformance(traces: readonly Trace[]): PerformanceAnalysis {
       const previous = trace.sequence[index - 1];
       const current = trace.sequence[index];
       record('inter_event', previous.activity, current.activity, current.timestampMs - previous.timestampMs, trace.caseKey);
+      const key = JSON.stringify([previous.activity, current.activity]);
+      const transition = coverage.get(key) ?? {
+        from: previous.activity, to: current.activity, transitionCount: 0, matchedGapCount: 0, overlapCount: 0,
+      };
+      transition.transitionCount++;
+      coverage.set(key, transition);
       const start = pairedStarts.get(current);
       if (!start || previous.lifecycle !== 'complete') continue;
       const gap = start.timestampMs - previous.timestampMs;
-      if (gap < 0) overlaps++;
-      else record('matched_gap', previous.activity, current.activity, gap, trace.caseKey);
+      if (gap < 0) {
+        overlaps++;
+        transition.overlapCount++;
+      } else {
+        transition.matchedGapCount++;
+        record('matched_gap', previous.activity, current.activity, gap, trace.caseKey);
+      }
     }
   }
 
@@ -56,5 +69,6 @@ export function getPerformance(traces: readonly Trace[]): PerformanceAnalysis {
     overlaps,
     matchedPairs,
     ambiguousPairs,
+    transitionCoverage: [...coverage.values()],
   };
 }

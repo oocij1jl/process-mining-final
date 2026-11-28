@@ -1,0 +1,487 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_AudienceAsIs" targetNamespace="https://processpilot.example/festival/AudienceAsIs" exporter="generate_festival_logs.py" exporterVersion="1.0.0">
+  <bpmn:collaboration id="Collaboration_AudienceAsIs">
+    <bpmn:participant id="Participant_AudienceAsIs" name="Audience Entry — North Gate (As-is)" processRef="Process_AudienceAsIs"/>
+    <bpmn:participant id="Participant_Attendee" name="Attendee (external)"/>
+    <bpmn:messageFlow id="MsgFlow_AttendeeJoins" name="Attendee enters serpentine queue" sourceRef="Participant_Attendee" targetRef="Task_JoinEntryQueue"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_AudienceAsIs" name="Audience Entry &amp; Crowd Management (As-is)" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_AudienceAsIs">
+      <bpmn:lane id="Lane_Queue" name="Queue &amp; Entry Record">
+        <bpmn:flowNodeRef>Start_Arrive</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_JoinEntryQueue</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EntryComplete</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Admitted</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_TicketLane" name="Ticket Lanes (3 pooled)">
+        <bpmn:flowNodeRef>Task_TicketVerification</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_ScanOK</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_TicketMerge</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Support" name="Ticket Support Desk">
+        <bpmn:flowNodeRef>Task_ManualTicketCheck</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_TicketValid</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Steward" name="Wristband Steward">
+        <bpmn:flowNodeRef>Gw_ReEntry</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_WristbandCheck</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_WristbandOK</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_WristbandMerge</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Security" name="Security Screener">
+        <bpmn:flowNodeRef>Task_SecurityCheck</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_BagFlagged</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_SecurityMerge</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Supervisor" name="Security Supervisor">
+        <bpmn:flowNodeRef>Task_AdditionalScreening</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_Cleared</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Rejection" name="Rejection Record">
+        <bpmn:flowNodeRef>Gw_Reject1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_Reject2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_Reject3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EntryRejected</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Refused</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Arrive" name="Attendee reaches entrance">
+      <bpmn:outgoing>Flow_A01</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:receiveTask id="Task_JoinEntryQueue" name="Join Entry Queue">
+      <bpmn:incoming>Flow_A01</bpmn:incoming>
+      <bpmn:outgoing>Flow_A02</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:userTask id="Task_TicketVerification" name="Ticket Verification">
+      <bpmn:incoming>Flow_A02</bpmn:incoming>
+      <bpmn:outgoing>Flow_A03</bpmn:outgoing>
+      <bpmn:property id="Property_Task_TicketVerification" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="DIA_DataObject_Credential_Task_TicketVerification">
+        <bpmn:sourceRef>DataObject_Credential</bpmn:sourceRef>
+        <bpmn:targetRef>Property_Task_TicketVerification</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gw_ScanOK" name="Credential scanned?">
+      <bpmn:incoming>Flow_A03</bpmn:incoming>
+      <bpmn:outgoing>Flow_A04</bpmn:outgoing>
+      <bpmn:outgoing>Flow_A05</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_ManualTicketCheck" name="Manual Ticket Check">
+      <bpmn:incoming>Flow_A05</bpmn:incoming>
+      <bpmn:outgoing>Flow_A06</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gw_TicketValid" name="Ticket valid?">
+      <bpmn:incoming>Flow_A06</bpmn:incoming>
+      <bpmn:outgoing>Flow_A07</bpmn:outgoing>
+      <bpmn:outgoing>Flow_A08</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gw_TicketMerge" name="">
+      <bpmn:incoming>Flow_A04</bpmn:incoming>
+      <bpmn:incoming>Flow_A07</bpmn:incoming>
+      <bpmn:outgoing>Flow_A09</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gw_ReEntry" name="Re-entry with wristband?">
+      <bpmn:incoming>Flow_A09</bpmn:incoming>
+      <bpmn:outgoing>Flow_A10</bpmn:outgoing>
+      <bpmn:outgoing>Flow_A11</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:manualTask id="Task_WristbandCheck" name="Wristband Check">
+      <bpmn:incoming>Flow_A10</bpmn:incoming>
+      <bpmn:outgoing>Flow_A12</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:exclusiveGateway id="Gw_WristbandOK" name="Wristband intact?">
+      <bpmn:incoming>Flow_A12</bpmn:incoming>
+      <bpmn:outgoing>Flow_A13</bpmn:outgoing>
+      <bpmn:outgoing>Flow_A14</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gw_WristbandMerge" name="">
+      <bpmn:incoming>Flow_A11</bpmn:incoming>
+      <bpmn:incoming>Flow_A13</bpmn:incoming>
+      <bpmn:outgoing>Flow_A15</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:manualTask id="Task_SecurityCheck" name="Security Check">
+      <bpmn:incoming>Flow_A15</bpmn:incoming>
+      <bpmn:outgoing>Flow_A16</bpmn:outgoing>
+      <bpmn:property id="Property_Task_SecurityCheck" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="DIA_DataObject_ProhibitedList_Task_SecurityCheck">
+        <bpmn:sourceRef>DataObject_ProhibitedList</bpmn:sourceRef>
+        <bpmn:targetRef>Property_Task_SecurityCheck</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+    </bpmn:manualTask>
+    <bpmn:exclusiveGateway id="Gw_BagFlagged" name="Bag flagged?">
+      <bpmn:incoming>Flow_A16</bpmn:incoming>
+      <bpmn:outgoing>Flow_A17</bpmn:outgoing>
+      <bpmn:outgoing>Flow_A18</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:manualTask id="Task_AdditionalScreening" name="Additional Screening">
+      <bpmn:incoming>Flow_A18</bpmn:incoming>
+      <bpmn:outgoing>Flow_A19</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:exclusiveGateway id="Gw_Cleared" name="Cleared?">
+      <bpmn:incoming>Flow_A19</bpmn:incoming>
+      <bpmn:outgoing>Flow_A20</bpmn:outgoing>
+      <bpmn:outgoing>Flow_A21</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gw_SecurityMerge" name="">
+      <bpmn:incoming>Flow_A17</bpmn:incoming>
+      <bpmn:incoming>Flow_A20</bpmn:incoming>
+      <bpmn:outgoing>Flow_A22</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_EntryComplete" name="Entry Complete">
+      <bpmn:incoming>Flow_A22</bpmn:incoming>
+      <bpmn:outgoing>Flow_A23</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Admitted" name="Admitted">
+      <bpmn:incoming>Flow_A23</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="Gw_Reject1" name="">
+      <bpmn:incoming>Flow_A08</bpmn:incoming>
+      <bpmn:outgoing>Flow_A24</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gw_Reject2" name="">
+      <bpmn:incoming>Flow_A14</bpmn:incoming>
+      <bpmn:incoming>Flow_A24</bpmn:incoming>
+      <bpmn:outgoing>Flow_A25</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gw_Reject3" name="">
+      <bpmn:incoming>Flow_A21</bpmn:incoming>
+      <bpmn:incoming>Flow_A25</bpmn:incoming>
+      <bpmn:outgoing>Flow_A26</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_EntryRejected" name="Entry Rejected">
+      <bpmn:incoming>Flow_A26</bpmn:incoming>
+      <bpmn:outgoing>Flow_A27</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_Refused" name="Entry refused">
+      <bpmn:incoming>Flow_A27</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_A01" sourceRef="Start_Arrive" targetRef="Task_JoinEntryQueue"/>
+    <bpmn:sequenceFlow id="Flow_A02" sourceRef="Task_JoinEntryQueue" targetRef="Task_TicketVerification"/>
+    <bpmn:sequenceFlow id="Flow_A03" sourceRef="Task_TicketVerification" targetRef="Gw_ScanOK"/>
+    <bpmn:sequenceFlow id="Flow_A04" name="yes" sourceRef="Gw_ScanOK" targetRef="Gw_TicketMerge"/>
+    <bpmn:sequenceFlow id="Flow_A05" name="no" sourceRef="Gw_ScanOK" targetRef="Task_ManualTicketCheck"/>
+    <bpmn:sequenceFlow id="Flow_A06" sourceRef="Task_ManualTicketCheck" targetRef="Gw_TicketValid"/>
+    <bpmn:sequenceFlow id="Flow_A07" name="yes" sourceRef="Gw_TicketValid" targetRef="Gw_TicketMerge"/>
+    <bpmn:sequenceFlow id="Flow_A08" name="no" sourceRef="Gw_TicketValid" targetRef="Gw_Reject1"/>
+    <bpmn:sequenceFlow id="Flow_A09" sourceRef="Gw_TicketMerge" targetRef="Gw_ReEntry"/>
+    <bpmn:sequenceFlow id="Flow_A10" name="yes" sourceRef="Gw_ReEntry" targetRef="Task_WristbandCheck"/>
+    <bpmn:sequenceFlow id="Flow_A11" name="no" sourceRef="Gw_ReEntry" targetRef="Gw_WristbandMerge"/>
+    <bpmn:sequenceFlow id="Flow_A12" sourceRef="Task_WristbandCheck" targetRef="Gw_WristbandOK"/>
+    <bpmn:sequenceFlow id="Flow_A13" name="yes" sourceRef="Gw_WristbandOK" targetRef="Gw_WristbandMerge"/>
+    <bpmn:sequenceFlow id="Flow_A14" name="no" sourceRef="Gw_WristbandOK" targetRef="Gw_Reject2"/>
+    <bpmn:sequenceFlow id="Flow_A15" sourceRef="Gw_WristbandMerge" targetRef="Task_SecurityCheck"/>
+    <bpmn:sequenceFlow id="Flow_A16" sourceRef="Task_SecurityCheck" targetRef="Gw_BagFlagged"/>
+    <bpmn:sequenceFlow id="Flow_A17" name="no" sourceRef="Gw_BagFlagged" targetRef="Gw_SecurityMerge"/>
+    <bpmn:sequenceFlow id="Flow_A18" name="yes" sourceRef="Gw_BagFlagged" targetRef="Task_AdditionalScreening"/>
+    <bpmn:sequenceFlow id="Flow_A19" sourceRef="Task_AdditionalScreening" targetRef="Gw_Cleared"/>
+    <bpmn:sequenceFlow id="Flow_A20" name="yes" sourceRef="Gw_Cleared" targetRef="Gw_SecurityMerge"/>
+    <bpmn:sequenceFlow id="Flow_A21" name="no" sourceRef="Gw_Cleared" targetRef="Gw_Reject3"/>
+    <bpmn:sequenceFlow id="Flow_A22" sourceRef="Gw_SecurityMerge" targetRef="Task_EntryComplete"/>
+    <bpmn:sequenceFlow id="Flow_A23" sourceRef="Task_EntryComplete" targetRef="End_Admitted"/>
+    <bpmn:sequenceFlow id="Flow_A24" sourceRef="Gw_Reject1" targetRef="Gw_Reject2"/>
+    <bpmn:sequenceFlow id="Flow_A25" sourceRef="Gw_Reject2" targetRef="Gw_Reject3"/>
+    <bpmn:sequenceFlow id="Flow_A26" sourceRef="Gw_Reject3" targetRef="Task_EntryRejected"/>
+    <bpmn:sequenceFlow id="Flow_A27" sourceRef="Task_EntryRejected" targetRef="End_Refused"/>
+    <bpmn:dataObject id="DataObject_DataObject_Credential"/>
+    <bpmn:dataObjectReference id="DataObject_Credential" name="Mobile ticket / wristband + photo ID" dataObjectRef="DataObject_DataObject_Credential"/>
+    <bpmn:dataObject id="DataObject_DataObject_ProhibitedList"/>
+    <bpmn:dataObjectReference id="DataObject_ProhibitedList" name="Prohibited items list" dataObjectRef="DataObject_DataObject_ProhibitedList"/>
+    <bpmn:textAnnotation id="Note_PooledLanes">
+      <bpmn:text>One serpentine queue feeds 3 identical staffed lanes (gate_id NG-L1..L3), FCFS. This is ONE pooled service station, not a parallel split: each attendee uses exactly one lane.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_Note_PooledLanes" associationDirection="None" sourceRef="Task_TicketVerification" targetRef="Note_PooledLanes"/>
+    <bpmn:textAnnotation id="Note_JoinQueue">
+      <bpmn:text>Join Entry Queue = observation when the attendee enters the serpentine. First entry: ticket + photo ID checked and wristband fitted at the lane; post-entry crowd movement is out of scope.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_Note_JoinQueue" associationDirection="None" sourceRef="Task_JoinEntryQueue" targetRef="Note_JoinQueue"/>
+    <bpmn:textAnnotation id="Note_Rejection">
+      <bpmn:text>Entry Rejected is recorded by the decision owner: Ticket Support, Wristband Steward or Security Supervisor.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_Note_Rejection" associationDirection="None" sourceRef="Task_EntryRejected" targetRef="Note_Rejection"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_AudienceAsIs">
+    <bpmndi:BPMNPlane id="BPMNPlane_AudienceAsIs" bpmnElement="Collaboration_AudienceAsIs">
+      <bpmndi:BPMNShape id="Participant_AudienceAsIs_di" bpmnElement="Participant_AudienceAsIs" isHorizontal="true">
+        <dc:Bounds x="160" y="150" width="3077" height="1050"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Queue_di" bpmnElement="Lane_Queue" isHorizontal="true">
+        <dc:Bounds x="190" y="150" width="3047" height="150"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_TicketLane_di" bpmnElement="Lane_TicketLane" isHorizontal="true">
+        <dc:Bounds x="190" y="300" width="3047" height="150"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Support_di" bpmnElement="Lane_Support" isHorizontal="true">
+        <dc:Bounds x="190" y="450" width="3047" height="150"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Steward_di" bpmnElement="Lane_Steward" isHorizontal="true">
+        <dc:Bounds x="190" y="600" width="3047" height="150"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Security_di" bpmnElement="Lane_Security" isHorizontal="true">
+        <dc:Bounds x="190" y="750" width="3047" height="150"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Supervisor_di" bpmnElement="Lane_Supervisor" isHorizontal="true">
+        <dc:Bounds x="190" y="900" width="3047" height="150"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Rejection_di" bpmnElement="Lane_Rejection" isHorizontal="true">
+        <dc:Bounds x="190" y="1050" width="3047" height="150"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Attendee_di" bpmnElement="Participant_Attendee" isHorizontal="true">
+        <dc:Bounds x="160" y="40" width="3077" height="60"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Arrive_di" bpmnElement="Start_Arrive">
+        <dc:Bounds x="272" y="207" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="230" y="247" width="120" height="40"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_JoinEntryQueue_di" bpmnElement="Task_JoinEntryQueue">
+        <dc:Bounds x="390" y="185" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_TicketVerification_di" bpmnElement="Task_TicketVerification">
+        <dc:Bounds x="555" y="335" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_ScanOK_di" bpmnElement="Gw_ScanOK" isMarkerVisible="true">
+        <dc:Bounds x="760" y="350" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="715" y="308" width="140" height="36"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ManualTicketCheck_di" bpmnElement="Task_ManualTicketCheck">
+        <dc:Bounds x="885" y="485" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_TicketValid_di" bpmnElement="Gw_TicketValid" isMarkerVisible="true">
+        <dc:Bounds x="1090" y="500" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1045" y="458" width="140" height="36"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_TicketMerge_di" bpmnElement="Gw_TicketMerge" isMarkerVisible="true">
+        <dc:Bounds x="1255" y="350" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_ReEntry_di" bpmnElement="Gw_ReEntry" isMarkerVisible="true">
+        <dc:Bounds x="1420" y="650" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1375" y="608" width="140" height="36"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_WristbandCheck_di" bpmnElement="Task_WristbandCheck">
+        <dc:Bounds x="1545" y="635" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_WristbandOK_di" bpmnElement="Gw_WristbandOK" isMarkerVisible="true">
+        <dc:Bounds x="1750" y="650" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1705" y="608" width="140" height="36"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_WristbandMerge_di" bpmnElement="Gw_WristbandMerge" isMarkerVisible="true">
+        <dc:Bounds x="1915" y="650" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SecurityCheck_di" bpmnElement="Task_SecurityCheck">
+        <dc:Bounds x="2040" y="785" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_BagFlagged_di" bpmnElement="Gw_BagFlagged" isMarkerVisible="true">
+        <dc:Bounds x="2245" y="800" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2200" y="758" width="140" height="36"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AdditionalScreening_di" bpmnElement="Task_AdditionalScreening">
+        <dc:Bounds x="2370" y="935" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_Cleared_di" bpmnElement="Gw_Cleared" isMarkerVisible="true">
+        <dc:Bounds x="2575" y="950" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2530" y="908" width="140" height="36"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_SecurityMerge_di" bpmnElement="Gw_SecurityMerge" isMarkerVisible="true">
+        <dc:Bounds x="2740" y="800" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_EntryComplete_di" bpmnElement="Task_EntryComplete">
+        <dc:Bounds x="2865" y="185" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Admitted_di" bpmnElement="End_Admitted">
+        <dc:Bounds x="3077" y="207" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="3035" y="247" width="120" height="40"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_Reject1_di" bpmnElement="Gw_Reject1" isMarkerVisible="true">
+        <dc:Bounds x="1090" y="1100" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_Reject2_di" bpmnElement="Gw_Reject2" isMarkerVisible="true">
+        <dc:Bounds x="1750" y="1100" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_Reject3_di" bpmnElement="Gw_Reject3" isMarkerVisible="true">
+        <dc:Bounds x="2575" y="1100" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_EntryRejected_di" bpmnElement="Task_EntryRejected">
+        <dc:Bounds x="2865" y="1085" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Refused_di" bpmnElement="End_Refused">
+        <dc:Bounds x="3077" y="1107" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="3035" y="1147" width="120" height="40"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataObject_Credential_di" bpmnElement="DataObject_Credential">
+        <dc:Bounds x="437" y="350" width="36" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="395" y="403" width="120" height="28"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataObject_ProhibitedList_di" bpmnElement="DataObject_ProhibitedList">
+        <dc:Bounds x="1952" y="830" width="36" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1910" y="883" width="120" height="28"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Note_PooledLanes_di" bpmnElement="Note_PooledLanes">
+        <dc:Bounds x="736" y="190" width="330" height="70"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Note_JoinQueue_di" bpmnElement="Note_JoinQueue">
+        <dc:Bounds x="1214" y="167" width="330" height="56"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Note_Rejection_di" bpmnElement="Note_Rejection">
+        <dc:Bounds x="2044" y="1059" width="320" height="44"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_A01_di" bpmnElement="Flow_A01">
+        <di:waypoint x="308" y="225"/>
+        <di:waypoint x="390" y="225"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A02_di" bpmnElement="Flow_A02">
+        <di:waypoint x="520" y="225"/>
+        <di:waypoint x="538" y="225"/>
+        <di:waypoint x="538" y="375"/>
+        <di:waypoint x="555" y="375"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A03_di" bpmnElement="Flow_A03">
+        <di:waypoint x="685" y="375"/>
+        <di:waypoint x="760" y="375"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A04_di" bpmnElement="Flow_A04">
+        <di:waypoint x="810" y="375"/>
+        <di:waypoint x="1255" y="375"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1036" y="357" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A05_di" bpmnElement="Flow_A05">
+        <di:waypoint x="785" y="400"/>
+        <di:waypoint x="785" y="525"/>
+        <di:waypoint x="885" y="525"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="789" y="444" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A06_di" bpmnElement="Flow_A06">
+        <di:waypoint x="1015" y="525"/>
+        <di:waypoint x="1090" y="525"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A07_di" bpmnElement="Flow_A07">
+        <di:waypoint x="1140" y="525"/>
+        <di:waypoint x="1280" y="525"/>
+        <di:waypoint x="1280" y="400"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1214" y="507" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A08_di" bpmnElement="Flow_A08">
+        <di:waypoint x="1115" y="550"/>
+        <di:waypoint x="1115" y="1100"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1119" y="807" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A09_di" bpmnElement="Flow_A09">
+        <di:waypoint x="1305" y="375"/>
+        <di:waypoint x="1357" y="375"/>
+        <di:waypoint x="1357" y="675"/>
+        <di:waypoint x="1420" y="675"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A10_di" bpmnElement="Flow_A10">
+        <di:waypoint x="1470" y="675"/>
+        <di:waypoint x="1545" y="675"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1512" y="657" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A11_di" bpmnElement="Flow_A11">
+        <di:waypoint x="1445" y="700"/>
+        <di:waypoint x="1445" y="734"/>
+        <di:waypoint x="1940" y="734"/>
+        <di:waypoint x="1940" y="700"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1449" y="699" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A12_di" bpmnElement="Flow_A12">
+        <di:waypoint x="1675" y="675"/>
+        <di:waypoint x="1750" y="675"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A13_di" bpmnElement="Flow_A13">
+        <di:waypoint x="1800" y="675"/>
+        <di:waypoint x="1915" y="675"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1862" y="657" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A14_di" bpmnElement="Flow_A14">
+        <di:waypoint x="1775" y="700"/>
+        <di:waypoint x="1775" y="1100"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1779" y="882" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A15_di" bpmnElement="Flow_A15">
+        <di:waypoint x="1965" y="675"/>
+        <di:waypoint x="1999" y="675"/>
+        <di:waypoint x="1999" y="825"/>
+        <di:waypoint x="2040" y="825"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A16_di" bpmnElement="Flow_A16">
+        <di:waypoint x="2170" y="825"/>
+        <di:waypoint x="2245" y="825"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A17_di" bpmnElement="Flow_A17">
+        <di:waypoint x="2295" y="825"/>
+        <di:waypoint x="2740" y="825"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2522" y="807" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A18_di" bpmnElement="Flow_A18">
+        <di:waypoint x="2270" y="850"/>
+        <di:waypoint x="2270" y="975"/>
+        <di:waypoint x="2370" y="975"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2274" y="894" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A19_di" bpmnElement="Flow_A19">
+        <di:waypoint x="2500" y="975"/>
+        <di:waypoint x="2575" y="975"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A20_di" bpmnElement="Flow_A20">
+        <di:waypoint x="2625" y="975"/>
+        <di:waypoint x="2765" y="975"/>
+        <di:waypoint x="2765" y="850"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2699" y="957" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A21_di" bpmnElement="Flow_A21">
+        <di:waypoint x="2600" y="1000"/>
+        <di:waypoint x="2600" y="1100"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2604" y="1032" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A22_di" bpmnElement="Flow_A22">
+        <di:waypoint x="2790" y="825"/>
+        <di:waypoint x="2824" y="825"/>
+        <di:waypoint x="2824" y="225"/>
+        <di:waypoint x="2865" y="225"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A23_di" bpmnElement="Flow_A23">
+        <di:waypoint x="2995" y="225"/>
+        <di:waypoint x="3077" y="225"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A24_di" bpmnElement="Flow_A24">
+        <di:waypoint x="1140" y="1125"/>
+        <di:waypoint x="1750" y="1125"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A25_di" bpmnElement="Flow_A25">
+        <di:waypoint x="1800" y="1125"/>
+        <di:waypoint x="2575" y="1125"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A26_di" bpmnElement="Flow_A26">
+        <di:waypoint x="2625" y="1125"/>
+        <di:waypoint x="2865" y="1125"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_A27_di" bpmnElement="Flow_A27">
+        <di:waypoint x="2995" y="1125"/>
+        <di:waypoint x="3077" y="1125"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MsgFlow_AttendeeJoins_di" bpmnElement="MsgFlow_AttendeeJoins">
+        <di:waypoint x="455" y="100"/>
+        <di:waypoint x="455" y="185"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="461" y="108" width="150" height="28"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DIA_DataObject_Credential_Task_TicketVerification_di" bpmnElement="DIA_DataObject_Credential_Task_TicketVerification">
+        <di:waypoint x="473" y="375"/>
+        <di:waypoint x="555" y="375"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DIA_DataObject_ProhibitedList_Task_SecurityCheck_di" bpmnElement="DIA_DataObject_ProhibitedList_Task_SecurityCheck">
+        <di:waypoint x="1988" y="855"/>
+        <di:waypoint x="2040" y="855"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_Note_PooledLanes_di" bpmnElement="Association_Note_PooledLanes">
+        <di:waypoint x="620" y="335"/>
+        <di:waypoint x="746" y="260"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_Note_JoinQueue_di" bpmnElement="Association_Note_JoinQueue">
+        <di:waypoint x="455" y="185"/>
+        <di:waypoint x="1214" y="195"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_Note_Rejection_di" bpmnElement="Association_Note_Rejection">
+        <di:waypoint x="2930" y="1085"/>
+        <di:waypoint x="2364" y="1081"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

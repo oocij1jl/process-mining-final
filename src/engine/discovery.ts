@@ -15,15 +15,21 @@ export function buildDFG(traces: readonly Trace[]): DFG {
   assertProcessScope(traces);
   const nodes = new Map<string, Count>();
   const edges = new Map<string, Count & Pick<Edge, 'from' | 'to'>>();
-  const starts = new Map<string, number>();
-  const ends = new Map<string, number>();
+  const starts = new Map<string, string[]>();
+  const ends = new Map<string, string[]>();
+
+  function recordEndpoint(map: Map<string, string[]>, activity: string, caseKey: string) {
+    const cases = map.get(activity);
+    if (cases) cases.push(caseKey);
+    else map.set(activity, [caseKey]);
+  }
 
   for (const { caseKey, sequence } of traces) {
     if (!sequence.length) continue;
     const start = sequence[0].activity;
     const end = sequence[sequence.length - 1].activity;
-    starts.set(start, (starts.get(start) ?? 0) + 1);
-    ends.set(end, (ends.get(end) ?? 0) + 1);
+    recordEndpoint(starts, start, caseKey);
+    recordEndpoint(ends, end, caseKey);
 
     for (let index = 0; index < sequence.length; index++) {
       const to = sequence[index].activity;
@@ -42,8 +48,10 @@ export function buildDFG(traces: readonly Trace[]): DFG {
   return {
     nodes: Array.from(nodes, ([activity, { count, cases }]) => ({ activity, count, caseKeys: [...cases] })),
     edges: Array.from(edges.values(), ({ from, to, count, cases }) => ({ from, to, count, caseKeys: [...cases] })),
-    starts: Object.fromEntries(starts),
-    ends: Object.fromEntries(ends),
+    starts: Object.fromEntries(Array.from(starts, ([activity, cases]) => [activity, cases.length])),
+    ends: Object.fromEntries(Array.from(ends, ([activity, cases]) => [activity, cases.length])),
+    startCases: Object.fromEntries(starts),
+    endCases: Object.fromEntries(ends),
   };
 }
 

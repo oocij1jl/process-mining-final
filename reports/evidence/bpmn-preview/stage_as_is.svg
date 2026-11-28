@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3112" height="1070" font-family="Arial" font-size="12">
+<rect width="100%" height="100%" fill="white"/>
+<defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#222"/></marker><marker id="m" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="white" stroke="#555"/></marker></defs>
+<rect x="160.0" y="150.0" width="2912.0" height="750.0" fill="none" stroke="#333" stroke-width="1.5"/>
+<line x1="190.0" y1="150.0" x2="190.0" y2="900.0" stroke="#333"/>
+<text x="178.0" y="525.0" transform="rotate(-90 178.0 525.0)" text-anchor="middle" font-weight="bold">Stage &amp; Technical Operations — per performance (As-is)</text>
+<rect x="160.0" y="40.0" width="2912.0" height="60.0" fill="none" stroke="#333" stroke-width="1.5"/>
+<text x="1616.0" y="75.0" text-anchor="middle" font-weight="bold">Artist / Tour Crew (external)</text>
+<rect x="160.0" y="950.0" width="2912.0" height="60.0" fill="none" stroke="#333" stroke-width="1.5"/>
+<text x="1616.0" y="985.0" text-anchor="middle" font-weight="bold">Equipment &amp; Technical Readiness (see equipment_as_is.bpmn)</text>
+<rect x="190.0" y="150.0" width="2882.0" height="150.0" fill="none" stroke="#999"/>
+<text x="206.0" y="225.0" transform="rotate(-90 206.0 225.0)" text-anchor="middle">Stage Manager</text>
+<rect x="190.0" y="300.0" width="2882.0" height="140.0" fill="none" stroke="#999"/>
+<text x="206.0" y="370.0" transform="rotate(-90 206.0 370.0)" text-anchor="middle">Backline Technician</text>
+<rect x="190.0" y="440.0" width="2882.0" height="150.0" fill="none" stroke="#999"/>
+<text x="206.0" y="515.0" transform="rotate(-90 206.0 515.0)" text-anchor="middle">Monitor Engineer</text>
+<rect x="190.0" y="590.0" width="2882.0" height="150.0" fill="none" stroke="#999"/>
+<text x="206.0" y="665.0" transform="rotate(-90 206.0 665.0)" text-anchor="middle">FOH Engineer</text>
+<rect x="190.0" y="740.0" width="2882.0" height="160.0" fill="none" stroke="#999"/>
+<text x="206.0" y="820.0" transform="rotate(-90 206.0 820.0)" text-anchor="middle">Issue Owner (by issue type)</text>
+<circle cx="290.0" cy="225.0" r="18.0" fill="white" stroke="#15803d" stroke-width="1.5"/>
+<text x="290.0" y="257.0" text-anchor="middle" font-size="11">Changeover slot</text>
+<text x="290.0" y="270.0" text-anchor="middle" font-size="11">begins</text>
+<rect x="390.0" y="185.0" width="130.0" height="80.0" rx="10" fill="#eef4ff" stroke="#1d4ed8" stroke-width="1.5"/>
+<text x="396.0" y="198.0" font-size="9" fill="#555">user</text>
+<text x="455.0" y="229.0" text-anchor="middle">Stage Handover</text>
+<rect x="555.0" y="330.0" width="130.0" height="80.0" rx="10" fill="#eef4ff" stroke="#1d4ed8" stroke-width="1.5"/>
+<text x="561.0" y="343.0" font-size="9" fill="#555">manual</text>
+<text x="620.0" y="374.0" text-anchor="middle">Stage Setup</text>
+<polygon points="785.0,490.0 810.0,515.0 785.0,540.0 760.0,515.0" fill="#fff7e6" stroke="#b45309" stroke-width="1.5"/>
+<text x="785.0" y="520.0" text-anchor="middle" font-weight="bold">X</text>
+<text x="785.0" y="468.0" text-anchor="middle" font-size="11">Line check performed?</text>
+<rect x="885.0" y="475.0" width="130.0" height="80.0" rx="10" fill="#eef4ff" stroke="#1d4ed8" stroke-width="1.5"/>
+<text x="891.0" y="488.0" font-size="9" fill="#555">manual</text>
+<text x="950.0" y="519.0" text-anchor="middle">Line Check</text>
+<polygon points="1115.0,490.0 1140.0,515.0 1115.0,540.0 1090.0,515.0" fill="#fff7e6" stroke="#b45309" stroke-width="1.5"/>
+<text x="1115.0" y="520.0" text-anchor="middle" font-weight="bold">X</text>
+<rect x="1215.0" y="625.0" width="130.0" height="80.0" rx="10" fill="#eef4ff" stroke="#1d4ed8" stroke-width="1.5"/>
+<text x="1221.0" y="638.0" font-size="9" fill="#555">user</text>
+<text x="1280.0" y="669.0" text-anchor="middle">Technical Check</text>
+<polygon points="1445.0,640.0 1470.0,665.0 1445.0,690.0 1420.0,665.0" fill="#fff7e6" stroke="#b45309" stroke-width="1.5"/>
+<text x="1445.0" y="670.0" text-anchor="middle" font-weight="bold">X</text>
+<text x="1445.0" y="618.0" text-anchor="middle" font-size="11">Technical check</text>
+<text x="1445.0" y="631.0" text-anchor="middle" font-size="11">passed?</text>
+<polygon points="1610.0,795.0 1635.0,820.0 1610.0,845.0 1585.0,820.0" fill="#fff7e6" stroke="#b45309" stroke-width="1.5"/>
+<text x="1610.0" y="825.0" text-anchor="middle" font-weight="bold">X</text>
+<rect x="1710.0" y="780.0" width="130.0" height="80.0" rx="10" fill="#eef4ff" stroke="#1d4ed8" stroke-width="1.5"/>
+<text x="1716.0" y="793.0" font-size="9" fill="#555">manual</text>
+<text x="1775.0" y="817.0" text-anchor="middle">Technical</text>
+<text x="1775.0" y="831.0" text-anchor="middle">Troubleshooting</text>
+<rect x="1875.0" y="625.0" width="130.0" height="80.0" rx="10" fill="#eef4ff" stroke="#1d4ed8" stroke-width="1.5"/>
+<text x="1881.0" y="638.0" font-size="9" fill="#555">user</text>
+<text x="1940.0" y="669.0" text-anchor="middle">Technical Recheck</text>
+<polygon points="2105.0,640.0 2130.0,665.0 2105.0,690.0 2080.0,665.0" fill="#fff7e6" stroke="#b45309" stroke-width="1.5"/>
+<text x="2105.0" y="670.0" text-anchor="middle" font-weight="bold">X</text>
+<text x="2105.0" y="618.0" text-anchor="middle" font-size="11">Recheck passed?</text>
+<polygon points="2270.0,200.0 2295.0,225.0 2270.0,250.0 2245.0,225.0" fill="#fff7e6" stroke="#b45309" stroke-width="1.5"/>
+<text x="2270.0" y="230.0" text-anchor="middle" font-weight="bold">X</text>
+<rect x="2370.0" y="185.0" width="130.0" height="80.0" rx="10" fill="#eef4ff" stroke="#1d4ed8" stroke-width="1.5"/>
+<text x="2376.0" y="198.0" font-size="9" fill="#555">user</text>
+<text x="2435.0" y="229.0" text-anchor="middle">Stage Ready</text>
+<rect x="2535.0" y="185.0" width="130.0" height="80.0" rx="10" fill="#eef4ff" stroke="#1d4ed8" stroke-width="1.5"/>
+<text x="2541.0" y="198.0" font-size="9" fill="#555">send</text>
+<text x="2600.0" y="229.0" text-anchor="middle">Performance Start</text>
+<rect x="2700.0" y="185.0" width="130.0" height="80.0" rx="10" fill="#eef4ff" stroke="#1d4ed8" stroke-width="1.5"/>
+<text x="2706.0" y="198.0" font-size="9" fill="#555">user</text>
+<text x="2765.0" y="229.0" text-anchor="middle">Performance End</text>
+<circle cx="2930.0" cy="225.0" r="18.0" fill="white" stroke="#15803d" stroke-width="3"/>
+<text x="2930.0" y="257.0" text-anchor="middle" font-size="11">Performance</text>
+<text x="2930.0" y="270.0" text-anchor="middle" font-size="11">completed</text>
+<path d="M668.0,192.0 h26.0 l10,10 v40.0 h-36.0 z" fill="white" stroke="#555"/>
+<text x="686.0" y="255.0" text-anchor="middle" font-size="10">Run-of-show</text>
+<text x="686.0" y="267.0" text-anchor="middle" font-size="10">(scheduled_start)</text>
+<path d="M457.0,345.0 h26.0 l10,10 v40.0 h-36.0 z" fill="white" stroke="#555"/>
+<text x="475.0" y="408.0" text-anchor="middle" font-size="10">Stage plot /</text>
+<text x="475.0" y="420.0" text-anchor="middle" font-size="10">technical rider</text>
+<path d="M1571.0,465.0 h-12 v84.0 h12" fill="none" stroke="#555"/>
+<text x="1565.0" y="478.0" font-size="10" fill="#333">Line Check only for band acts; skipped for</text>
+<text x="1565.0" y="490.0" font-size="10" fill="#333">DJ/playback sets and, with p=0.6, when setup</text>
+<text x="1565.0" y="502.0" font-size="10" fill="#333">ends inside the compressed-changeover threshold.</text>
+<text x="1565.0" y="514.0" font-size="10" fill="#333">Headliner full soundcheck happens earlier in the</text>
+<text x="1565.0" y="526.0" font-size="10" fill="#333">day (outside this case).</text>
+<path d="M2172.0,785.0 h-12 v70.0 h12" fill="none" stroke="#555"/>
+<text x="2166.0" y="798.0" font-size="10" fill="#333">Issue owner by issue_type: monitor_mix /</text>
+<text x="2166.0" y="810.0" font-size="10" fill="#333">wireless_rf -&gt; Monitor Engineer; signal_path -&gt;</text>
+<text x="2166.0" y="822.0" font-size="10" fill="#333">Backline Tech; lighting_cue -&gt; Lighting</text>
+<text x="2166.0" y="834.0" font-size="10" fill="#333">Operator. Recheck loop max 3.</text>
+<path d="M892.0,342.0 h-12 v56.0 h12" fill="none" stroke="#555"/>
+<text x="886.0" y="355.0" font-size="10" fill="#333">Setup cannot complete before all linked</text>
+<text x="886.0" y="367.0" font-size="10" fill="#333">equipment is Equipment Ready (+2-5 min</text>
+<text x="886.0" y="379.0" font-size="10" fill="#333">install).</text>
+<polyline points="308.0,225.0 390.0,225.0" fill="none" stroke="#222" stroke-width="1.3" marker-end="url(#a)"/>
+<polyline points="520.0,225.0 538.0,225.0 538.0,370.0 555.0,370.0" fill="none" stroke="#222" stroke-width="1.3" marker-end="url(#a)"/>
+<polyline points="685.0,370.0 722.0,370.0 722.0,515.0 760.0,515.0" fill="none" stroke="#222" stroke-width="1.3" marker-end="url(#a)"/>
+<polyline points="810.0,515.0 885.0,515.0" fill="none" stroke="#222" stroke-width="1.3" marker-end="url(#a)"/>
+<text x="851.5" y="511.0" font-size="10" fill="#7c2d12">yes</text>
+<polyline points="785.0,540.0 785.0,574.0 1115.0,574.0 1115.0,540.0" fill="none" stroke="#222" stroke-width="1.3" marker-end="url(#a)"/>
+<text x="789.0" y="553.0" font-size="10" fill="#7c2d12">no</text>
+<polyline points="1015.0,515.0 1090.0,515.0" fill="none" stroke="#222" stroke-width="1.3" marker-end="url(#a)"/>
+<polyline points="1115.0,540.0 1115.0,665.0 1215.0,665.0" fill="none" stroke="#222" stroke-width="1.3" marker-end="url(#a)"/>
+<polyline points="1345.0,665.0 1420.0,665.0" fill="none" stroke="#222" stroke-width="1.3" marker-end="url(#a)"/>
+<polyline points="1445.0,640.0 1445.0,225.0 2245.0,225.0" fill="none" stroke="#222" stroke-width="1.3" marker-end="url(#a)"/>
+<text x="1449.0" y="428.5" font-size="10" fill="#7c2d12">yes</text>
+<polyline points="1445.0,690.0 1445.0,820.0 1585.0,820.0" fill="none" stroke="#222" stroke-width="1.3" marker-end="url(#a)"/>
+<text x="1449.0" y="751.0" font-size="10" fill="#7c2d12">no</text>
+<polyline points="1635.0,820.0 1710.0,820.0" fill="none" stroke="#222" stroke-width="1.3" marker-end="url(#a)"/>
+<polyline points="1840.0,820.0 1858.0,820.0 1858.0,665.0 1875.0,665.0" fill="none" stroke="#222" stroke-width="1.3" marker-end="url(#a)"/>
+<polyline points="2005.0,665.0 2080.0,665.0" fill="none" stroke="#222" stroke-width="1.3" marker-end="url(#a)"/>
+<polyline points="2105.0,640.0 2105.0,225.0 2245.0,225.0" fill="none" stroke="#222" stroke-width="1.3" marker-end="url(#a)"/>
+<text x="2109.0" y="428.5" font-size="10" fill="#7c2d12">yes</text>
+<polyline points="2105.0,690.0 2105.0,869.0 1610.0,869.0 1610.0,845.0" fill="none" stroke="#222" stroke-width="1.3" marker-end="url(#a)"/>
+<text x="2109.0" y="775.5" font-size="10" fill="#7c2d12">no</text>
+<polyline points="2295.0,225.0 2370.0,225.0" fill="none" stroke="#222" stroke-width="1.3" marker-end="url(#a)"/>
+<polyline points="2500.0,225.0 2535.0,225.0" fill="none" stroke="#222" stroke-width="1.3" marker-end="url(#a)"/>
+<polyline points="2665.0,225.0 2700.0,225.0" fill="none" stroke="#222" stroke-width="1.3" marker-end="url(#a)"/>
+<polyline points="2830.0,225.0 2912.0,225.0" fill="none" stroke="#222" stroke-width="1.3" marker-end="url(#a)"/>
+<polyline points="455.0,100.0 455.0,185.0" fill="none" stroke="#555" stroke-dasharray="6,4" marker-end="url(#m)"/>
+<text x="461.0" y="142.5" font-size="10" fill="#555">Artist crew &amp; gear at stage</text>
+<polyline points="2600.0,185.0 2600.0,100.0" fill="none" stroke="#555" stroke-dasharray="6,4" marker-end="url(#m)"/>
+<text x="2606.0" y="142.5" font-size="10" fill="#555">Walk-on cue</text>
+<polyline points="620.0,950.0 620.0,410.0" fill="none" stroke="#555" stroke-dasharray="6,4" marker-end="url(#m)"/>
+<text x="626.0" y="680.0" font-size="10" fill="#555">Equipment Ready notice (per linked request)</text>
+<polyline points="668.0,217.0 520.0,217.0" fill="none" stroke="#777" stroke-dasharray="2,3"/>
+<polyline points="493.0,370.0 555.0,370.0" fill="none" stroke="#777" stroke-dasharray="2,3"/>
+<polyline points="1115.0,490.0 1559.0,507.0" fill="none" stroke="#777" stroke-dasharray="2,3"/>
+<polyline points="1775.0,780.0 2160.0,820.0" fill="none" stroke="#777" stroke-dasharray="2,3"/>
+<polyline points="620.0,330.0 880.0,370.0" fill="none" stroke="#777" stroke-dasharray="2,3"/>
+</svg>

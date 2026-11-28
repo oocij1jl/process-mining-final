@@ -1,0 +1,30 @@
+<?xml version="1.1" encoding="UTF-8"?>
+<x:log xmlns:x="http://www.xes-standard.org/">
+  <x:extension name="Concept" prefix="concept" uri="https://example.invalid/concept"/>
+  <x:global scope="event"><x:string key="concept:name" value="Ignored default"/></x:global>
+  <x:trace>
+    <x:string key="concept:name" value="001"/><x:string key="process_type" value="orders"/>
+    <x:event><x:string key="concept:name" value="A"/><x:date key="time:timestamp" value="2026-11-28T09:00:00+09:00"/><x:string key="org:resource" value="R1"/><x:string key="org:role" value="Intake"/></x:event>
+    <x:event><x:string key="concept:name" value="B"/><x:date key="time:timestamp" value="2026-11-28T00:00:00Z"/><x:string key="lifecycle:transition" value="start"/><x:string key="concept:instance" value="01"/><x:string key="org:resource" value="R2"/><x:string key="org:role" value="Review"/></x:event>
+    <x:event><x:string key="concept:name" value="B"/><x:date key="time:timestamp" value="2026-11-28T00:02:00Z"/><x:string key="lifecycle:transition" value="complete"/><x:string key="concept:instance" value="01"/><x:string key="org:resource" value="R2"/><x:string key="org:role" value="Review"/></x:event>
+    <x:event><x:string key="concept:name" value="A"/><x:date key="time:timestamp" value="2026-11-28T00:04:00Z"/><x:string key="org:resource" value="R3"/><x:string key="org:role" value="Finish"/></x:event>
+  </x:trace>
+  <x:trace>
+    <x:string key="concept:name" value="공연01"/><x:string key="process_type" value="stage"/>
+    <x:string key="festival:festival_id" value="F1"/><x:string key="festival:performance_id" value="P1"/>
+    <x:date key="festival:scheduled_start" value="2026-11-28T00:10:00Z"/>
+    <x:event><x:string key="concept:name" value="Stage Handover"/><x:date key="time:timestamp" value="2026-11-28T00:00:00Z"/><x:string key="lifecycle:transition" value="start"/><x:string key="concept:instance" value="H1"/><x:string key="org:resource" value="Crew"/><x:string key="org:role" value="Stage"/></x:event>
+    <x:event><x:string key="concept:name" value="Stage Handover"/><x:date key="time:timestamp" value="2026-11-28T00:01:00Z"/><x:string key="lifecycle:transition" value="complete"/><x:string key="activity_instance_id" value="H1"/><x:string key="org:resource" value="Crew"/><x:string key="org:role" value="Stage"/></x:event>
+    <x:event><x:string key="concept:name" value="Stage Ready"/><x:date key="time:timestamp" value="2026-11-28T00:09:00Z"/><x:string key="org:resource" value="Crew"/><x:string key="org:role" value="Stage"/></x:event>
+  </x:trace>
+  <x:trace>
+    <x:string key="concept:name" value="001"/><x:string key="process_type" value="audience"/><x:string key="festival_id" value="F1"/>
+    <x:event><x:string key="concept:name" value="Join Entry Queue"/><x:date key="time:timestamp" value="2026-11-28T00:00:00Z"/><x:string key="org:resource" value="Lobby"/></x:event>
+    <x:event><x:string key="concept:name" value="Entry Complete"/><x:date key="time:timestamp" value="2026-11-28T00:01:00Z"/><x:string key="org:resource" value="Gate"/></x:event>
+  </x:trace>
+  <x:trace>
+    <x:string key="concept:name" value="002"/><x:string key="process_type" value="audience"/><x:string key="festival_id" value="F1"/>
+    <x:event><x:string key="concept:name" value="Join Entry Queue"/><x:date key="time:timestamp" value="2026-11-28T00:05:00Z"/><x:string key="org:resource" value="Lobby"/></x:event>
+    <x:event><x:string key="concept:name" value="Entry Rejected"/><x:date key="time:timestamp" value="2026-11-28T00:06:00Z"/><x:string key="org:resource" value="Gate"/></x:event>
+  </x:trace>
+</x:log>

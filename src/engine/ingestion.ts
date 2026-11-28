@@ -46,7 +46,8 @@ export function validateAndNormalize(rows: readonly RawRow[], options: ImportOpt
   }
 
   const mappedColumns = new Set(Object.values(options.mapping).filter(Boolean));
-  const validateFestival = options.requireProcessType === true && Boolean(options.mapping.festival_id?.trim());
+  const validateFestival = options.festivalValidation ??
+    (options.requireProcessType === true && Boolean(options.mapping.festival_id?.trim()));
   const extraMappings = Object.entries(options.mapping).filter(([field, header]) => header && !eventFields.has(field));
   const missingResources = new Set(options.missingResources.map(resource => resource.trim()));
   const eventIds = new Set<string>();

@@ -66,7 +66,9 @@ describe('Phase 1 public engine functions', () => {
         { from: 'B', to: 'C', count: 1, caseKeys: [firstCase] },
         { from: 'A', to: 'C', count: 1, caseKeys: [secondCase] },
       ],
-      starts: { A: 2 }, ends: { C: 2 },
+      starts: { A: 2 },
+      startCases: { A: [firstCase, secondCase] },
+      endCases: { C: [firstCase, secondCase] }, ends: { C: 2 },
     });
   });
 
@@ -103,8 +105,10 @@ describe('Phase 1 public engine functions', () => {
         { resource: 'R2', rawEvents: 3, instances: 2, distinctCases: 2, activityCounts: { A: 1, B: 1 }, activeMin: 4, caseKeys: [firstCase, secondCase], roles: [] },
       ],
       handoffs: [
-        { from: 'R1', to: 'R2', count: 1, caseKeys: [firstCase] },
-        { from: 'R2', to: 'R1', count: 1, caseKeys: [secondCase] },
+        { from: 'R1', to: 'R2', count: 1, caseKeys: [firstCase],
+          activityPairs: [{ from: 'A', to: 'B', count: 1, caseKeys: [firstCase] }] },
+        { from: 'R2', to: 'R1', count: 1, caseKeys: [secondCase],
+          activityPairs: [{ from: 'A', to: 'C', count: 1, caseKeys: [secondCase] }] },
       ],
     });
   });

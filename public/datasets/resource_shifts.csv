@@ -1,0 +1,167 @@
+resource_id,resource,resource_role,process_type,festival_id,area,shift_date,shift_start,shift_end,assignable_activities
+DFO26-MAIN-StageManager-E,MAIN Stage Manager E,stage_manager,stage,DFO26,MAIN,2026-08-07,2026-08-07T10:00:00+09:00,2026-08-07T17:30:00+09:00,Stage Handover;Stage Ready;Performance Start;Performance End
+DFO26-MAIN-StageManager-E,MAIN Stage Manager E,stage_manager,stage,DFO26,MAIN,2026-08-08,2026-08-08T10:00:00+09:00,2026-08-08T17:30:00+09:00,Stage Handover;Stage Ready;Performance Start;Performance End
+DFO26-MAIN-StageManager-E,MAIN Stage Manager E,stage_manager,stage,DFO26,MAIN,2026-08-09,2026-08-09T10:00:00+09:00,2026-08-09T17:30:00+09:00,Stage Handover;Stage Ready;Performance Start;Performance End
+DFO26-MAIN-StageManager-L,MAIN Stage Manager L,stage_manager,stage,DFO26,MAIN,2026-08-07,2026-08-07T16:00:00+09:00,2026-08-08T00:00:00+09:00,Stage Handover;Stage Ready;Performance Start;Performance End
+DFO26-MAIN-StageManager-L,MAIN Stage Manager L,stage_manager,stage,DFO26,MAIN,2026-08-08,2026-08-08T16:00:00+09:00,2026-08-09T00:00:00+09:00,Stage Handover;Stage Ready;Performance Start;Performance End
+DFO26-MAIN-StageManager-L,MAIN Stage Manager L,stage_manager,stage,DFO26,MAIN,2026-08-09,2026-08-09T16:00:00+09:00,2026-08-10T00:00:00+09:00,Stage Handover;Stage Ready;Performance Start;Performance End
+DFO26-MAIN-BacklineTech-E1,MAIN Backline Tech E1,backline_tech,stage,DFO26,MAIN,2026-08-07,2026-08-07T10:00:00+09:00,2026-08-07T17:30:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-MAIN-BacklineTech-E1,MAIN Backline Tech E1,backline_tech,stage,DFO26,MAIN,2026-08-08,2026-08-08T10:00:00+09:00,2026-08-08T17:30:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-MAIN-BacklineTech-E1,MAIN Backline Tech E1,backline_tech,stage,DFO26,MAIN,2026-08-09,2026-08-09T10:00:00+09:00,2026-08-09T17:30:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-MAIN-BacklineTech-E2,MAIN Backline Tech E2,backline_tech,stage,DFO26,MAIN,2026-08-07,2026-08-07T10:00:00+09:00,2026-08-07T17:30:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-MAIN-BacklineTech-E2,MAIN Backline Tech E2,backline_tech,stage,DFO26,MAIN,2026-08-08,2026-08-08T10:00:00+09:00,2026-08-08T17:30:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-MAIN-BacklineTech-E2,MAIN Backline Tech E2,backline_tech,stage,DFO26,MAIN,2026-08-09,2026-08-09T10:00:00+09:00,2026-08-09T17:30:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-MAIN-BacklineTech-L1,MAIN Backline Tech L1,backline_tech,stage,DFO26,MAIN,2026-08-07,2026-08-07T16:00:00+09:00,2026-08-08T00:00:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-MAIN-BacklineTech-L1,MAIN Backline Tech L1,backline_tech,stage,DFO26,MAIN,2026-08-08,2026-08-08T16:00:00+09:00,2026-08-09T00:00:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-MAIN-BacklineTech-L1,MAIN Backline Tech L1,backline_tech,stage,DFO26,MAIN,2026-08-09,2026-08-09T16:00:00+09:00,2026-08-10T00:00:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-MAIN-BacklineTech-L2,MAIN Backline Tech L2,backline_tech,stage,DFO26,MAIN,2026-08-07,2026-08-07T16:00:00+09:00,2026-08-08T00:00:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-MAIN-BacklineTech-L2,MAIN Backline Tech L2,backline_tech,stage,DFO26,MAIN,2026-08-08,2026-08-08T16:00:00+09:00,2026-08-09T00:00:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-MAIN-BacklineTech-L2,MAIN Backline Tech L2,backline_tech,stage,DFO26,MAIN,2026-08-09,2026-08-09T16:00:00+09:00,2026-08-10T00:00:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-MAIN-MonitorEngineer-E,MAIN Monitor Engineer E,monitor_engineer,stage,DFO26,MAIN,2026-08-07,2026-08-07T10:00:00+09:00,2026-08-07T17:30:00+09:00,Line Check;Technical Troubleshooting
+DFO26-MAIN-MonitorEngineer-E,MAIN Monitor Engineer E,monitor_engineer,stage,DFO26,MAIN,2026-08-08,2026-08-08T10:00:00+09:00,2026-08-08T17:30:00+09:00,Line Check;Technical Troubleshooting
+DFO26-MAIN-MonitorEngineer-E,MAIN Monitor Engineer E,monitor_engineer,stage,DFO26,MAIN,2026-08-09,2026-08-09T10:00:00+09:00,2026-08-09T17:30:00+09:00,Line Check;Technical Troubleshooting
+DFO26-MAIN-MonitorEngineer-L,MAIN Monitor Engineer L,monitor_engineer,stage,DFO26,MAIN,2026-08-07,2026-08-07T16:00:00+09:00,2026-08-08T00:00:00+09:00,Line Check;Technical Troubleshooting
+DFO26-MAIN-MonitorEngineer-L,MAIN Monitor Engineer L,monitor_engineer,stage,DFO26,MAIN,2026-08-08,2026-08-08T16:00:00+09:00,2026-08-09T00:00:00+09:00,Line Check;Technical Troubleshooting
+DFO26-MAIN-MonitorEngineer-L,MAIN Monitor Engineer L,monitor_engineer,stage,DFO26,MAIN,2026-08-09,2026-08-09T16:00:00+09:00,2026-08-10T00:00:00+09:00,Line Check;Technical Troubleshooting
+DFO26-MAIN-FOHEngineer-E,MAIN FOH Engineer E,foh_engineer,stage,DFO26,MAIN,2026-08-07,2026-08-07T10:00:00+09:00,2026-08-07T17:30:00+09:00,Technical Check;Technical Recheck
+DFO26-MAIN-FOHEngineer-E,MAIN FOH Engineer E,foh_engineer,stage,DFO26,MAIN,2026-08-08,2026-08-08T10:00:00+09:00,2026-08-08T17:30:00+09:00,Technical Check;Technical Recheck
+DFO26-MAIN-FOHEngineer-E,MAIN FOH Engineer E,foh_engineer,stage,DFO26,MAIN,2026-08-09,2026-08-09T10:00:00+09:00,2026-08-09T17:30:00+09:00,Technical Check;Technical Recheck
+DFO26-MAIN-FOHEngineer-L,MAIN FOH Engineer L,foh_engineer,stage,DFO26,MAIN,2026-08-07,2026-08-07T16:00:00+09:00,2026-08-08T00:00:00+09:00,Technical Check;Technical Recheck
+DFO26-MAIN-FOHEngineer-L,MAIN FOH Engineer L,foh_engineer,stage,DFO26,MAIN,2026-08-08,2026-08-08T16:00:00+09:00,2026-08-09T00:00:00+09:00,Technical Check;Technical Recheck
+DFO26-MAIN-FOHEngineer-L,MAIN FOH Engineer L,foh_engineer,stage,DFO26,MAIN,2026-08-09,2026-08-09T16:00:00+09:00,2026-08-10T00:00:00+09:00,Technical Check;Technical Recheck
+DFO26-MAIN-LightingOperator-E,MAIN Lighting Operator E,lighting_operator,stage,DFO26,MAIN,2026-08-07,2026-08-07T10:00:00+09:00,2026-08-07T17:30:00+09:00,Technical Troubleshooting
+DFO26-MAIN-LightingOperator-E,MAIN Lighting Operator E,lighting_operator,stage,DFO26,MAIN,2026-08-08,2026-08-08T10:00:00+09:00,2026-08-08T17:30:00+09:00,Technical Troubleshooting
+DFO26-MAIN-LightingOperator-E,MAIN Lighting Operator E,lighting_operator,stage,DFO26,MAIN,2026-08-09,2026-08-09T10:00:00+09:00,2026-08-09T17:30:00+09:00,Technical Troubleshooting
+DFO26-MAIN-LightingOperator-L,MAIN Lighting Operator L,lighting_operator,stage,DFO26,MAIN,2026-08-07,2026-08-07T16:00:00+09:00,2026-08-08T00:00:00+09:00,Technical Troubleshooting
+DFO26-MAIN-LightingOperator-L,MAIN Lighting Operator L,lighting_operator,stage,DFO26,MAIN,2026-08-08,2026-08-08T16:00:00+09:00,2026-08-09T00:00:00+09:00,Technical Troubleshooting
+DFO26-MAIN-LightingOperator-L,MAIN Lighting Operator L,lighting_operator,stage,DFO26,MAIN,2026-08-09,2026-08-09T16:00:00+09:00,2026-08-10T00:00:00+09:00,Technical Troubleshooting
+DFO26-RIVER-StageManager-E,RIVER Stage Manager E,stage_manager,stage,DFO26,RIVER,2026-08-07,2026-08-07T10:00:00+09:00,2026-08-07T17:30:00+09:00,Stage Handover;Stage Ready;Performance Start;Performance End
+DFO26-RIVER-StageManager-E,RIVER Stage Manager E,stage_manager,stage,DFO26,RIVER,2026-08-08,2026-08-08T10:00:00+09:00,2026-08-08T17:30:00+09:00,Stage Handover;Stage Ready;Performance Start;Performance End
+DFO26-RIVER-StageManager-E,RIVER Stage Manager E,stage_manager,stage,DFO26,RIVER,2026-08-09,2026-08-09T10:00:00+09:00,2026-08-09T17:30:00+09:00,Stage Handover;Stage Ready;Performance Start;Performance End
+DFO26-RIVER-StageManager-L,RIVER Stage Manager L,stage_manager,stage,DFO26,RIVER,2026-08-07,2026-08-07T16:00:00+09:00,2026-08-08T00:00:00+09:00,Stage Handover;Stage Ready;Performance Start;Performance End
+DFO26-RIVER-StageManager-L,RIVER Stage Manager L,stage_manager,stage,DFO26,RIVER,2026-08-08,2026-08-08T16:00:00+09:00,2026-08-09T00:00:00+09:00,Stage Handover;Stage Ready;Performance Start;Performance End
+DFO26-RIVER-StageManager-L,RIVER Stage Manager L,stage_manager,stage,DFO26,RIVER,2026-08-09,2026-08-09T16:00:00+09:00,2026-08-10T00:00:00+09:00,Stage Handover;Stage Ready;Performance Start;Performance End
+DFO26-RIVER-BacklineTech-E1,RIVER Backline Tech E1,backline_tech,stage,DFO26,RIVER,2026-08-07,2026-08-07T10:00:00+09:00,2026-08-07T17:30:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-RIVER-BacklineTech-E1,RIVER Backline Tech E1,backline_tech,stage,DFO26,RIVER,2026-08-08,2026-08-08T10:00:00+09:00,2026-08-08T17:30:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-RIVER-BacklineTech-E1,RIVER Backline Tech E1,backline_tech,stage,DFO26,RIVER,2026-08-09,2026-08-09T10:00:00+09:00,2026-08-09T17:30:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-RIVER-BacklineTech-E2,RIVER Backline Tech E2,backline_tech,stage,DFO26,RIVER,2026-08-07,2026-08-07T10:00:00+09:00,2026-08-07T17:30:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-RIVER-BacklineTech-E2,RIVER Backline Tech E2,backline_tech,stage,DFO26,RIVER,2026-08-08,2026-08-08T10:00:00+09:00,2026-08-08T17:30:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-RIVER-BacklineTech-E2,RIVER Backline Tech E2,backline_tech,stage,DFO26,RIVER,2026-08-09,2026-08-09T10:00:00+09:00,2026-08-09T17:30:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-RIVER-BacklineTech-L1,RIVER Backline Tech L1,backline_tech,stage,DFO26,RIVER,2026-08-07,2026-08-07T16:00:00+09:00,2026-08-08T00:00:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-RIVER-BacklineTech-L1,RIVER Backline Tech L1,backline_tech,stage,DFO26,RIVER,2026-08-08,2026-08-08T16:00:00+09:00,2026-08-09T00:00:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-RIVER-BacklineTech-L1,RIVER Backline Tech L1,backline_tech,stage,DFO26,RIVER,2026-08-09,2026-08-09T16:00:00+09:00,2026-08-10T00:00:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-RIVER-BacklineTech-L2,RIVER Backline Tech L2,backline_tech,stage,DFO26,RIVER,2026-08-07,2026-08-07T16:00:00+09:00,2026-08-08T00:00:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-RIVER-BacklineTech-L2,RIVER Backline Tech L2,backline_tech,stage,DFO26,RIVER,2026-08-08,2026-08-08T16:00:00+09:00,2026-08-09T00:00:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-RIVER-BacklineTech-L2,RIVER Backline Tech L2,backline_tech,stage,DFO26,RIVER,2026-08-09,2026-08-09T16:00:00+09:00,2026-08-10T00:00:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-RIVER-MonitorEngineer-E,RIVER Monitor Engineer E,monitor_engineer,stage,DFO26,RIVER,2026-08-07,2026-08-07T10:00:00+09:00,2026-08-07T17:30:00+09:00,Line Check;Technical Troubleshooting
+DFO26-RIVER-MonitorEngineer-E,RIVER Monitor Engineer E,monitor_engineer,stage,DFO26,RIVER,2026-08-08,2026-08-08T10:00:00+09:00,2026-08-08T17:30:00+09:00,Line Check;Technical Troubleshooting
+DFO26-RIVER-MonitorEngineer-E,RIVER Monitor Engineer E,monitor_engineer,stage,DFO26,RIVER,2026-08-09,2026-08-09T10:00:00+09:00,2026-08-09T17:30:00+09:00,Line Check;Technical Troubleshooting
+DFO26-RIVER-MonitorEngineer-L,RIVER Monitor Engineer L,monitor_engineer,stage,DFO26,RIVER,2026-08-07,2026-08-07T16:00:00+09:00,2026-08-08T00:00:00+09:00,Line Check;Technical Troubleshooting
+DFO26-RIVER-MonitorEngineer-L,RIVER Monitor Engineer L,monitor_engineer,stage,DFO26,RIVER,2026-08-08,2026-08-08T16:00:00+09:00,2026-08-09T00:00:00+09:00,Line Check;Technical Troubleshooting
+DFO26-RIVER-MonitorEngineer-L,RIVER Monitor Engineer L,monitor_engineer,stage,DFO26,RIVER,2026-08-09,2026-08-09T16:00:00+09:00,2026-08-10T00:00:00+09:00,Line Check;Technical Troubleshooting
+DFO26-RIVER-FOHEngineer-E,RIVER FOH Engineer E,foh_engineer,stage,DFO26,RIVER,2026-08-07,2026-08-07T10:00:00+09:00,2026-08-07T17:30:00+09:00,Technical Check;Technical Recheck
+DFO26-RIVER-FOHEngineer-E,RIVER FOH Engineer E,foh_engineer,stage,DFO26,RIVER,2026-08-08,2026-08-08T10:00:00+09:00,2026-08-08T17:30:00+09:00,Technical Check;Technical Recheck
+DFO26-RIVER-FOHEngineer-E,RIVER FOH Engineer E,foh_engineer,stage,DFO26,RIVER,2026-08-09,2026-08-09T10:00:00+09:00,2026-08-09T17:30:00+09:00,Technical Check;Technical Recheck
+DFO26-RIVER-FOHEngineer-L,RIVER FOH Engineer L,foh_engineer,stage,DFO26,RIVER,2026-08-07,2026-08-07T16:00:00+09:00,2026-08-08T00:00:00+09:00,Technical Check;Technical Recheck
+DFO26-RIVER-FOHEngineer-L,RIVER FOH Engineer L,foh_engineer,stage,DFO26,RIVER,2026-08-08,2026-08-08T16:00:00+09:00,2026-08-09T00:00:00+09:00,Technical Check;Technical Recheck
+DFO26-RIVER-FOHEngineer-L,RIVER FOH Engineer L,foh_engineer,stage,DFO26,RIVER,2026-08-09,2026-08-09T16:00:00+09:00,2026-08-10T00:00:00+09:00,Technical Check;Technical Recheck
+DFO26-RIVER-LightingOperator-E,RIVER Lighting Operator E,lighting_operator,stage,DFO26,RIVER,2026-08-07,2026-08-07T10:00:00+09:00,2026-08-07T17:30:00+09:00,Technical Troubleshooting
+DFO26-RIVER-LightingOperator-E,RIVER Lighting Operator E,lighting_operator,stage,DFO26,RIVER,2026-08-08,2026-08-08T10:00:00+09:00,2026-08-08T17:30:00+09:00,Technical Troubleshooting
+DFO26-RIVER-LightingOperator-E,RIVER Lighting Operator E,lighting_operator,stage,DFO26,RIVER,2026-08-09,2026-08-09T10:00:00+09:00,2026-08-09T17:30:00+09:00,Technical Troubleshooting
+DFO26-RIVER-LightingOperator-L,RIVER Lighting Operator L,lighting_operator,stage,DFO26,RIVER,2026-08-07,2026-08-07T16:00:00+09:00,2026-08-08T00:00:00+09:00,Technical Troubleshooting
+DFO26-RIVER-LightingOperator-L,RIVER Lighting Operator L,lighting_operator,stage,DFO26,RIVER,2026-08-08,2026-08-08T16:00:00+09:00,2026-08-09T00:00:00+09:00,Technical Troubleshooting
+DFO26-RIVER-LightingOperator-L,RIVER Lighting Operator L,lighting_operator,stage,DFO26,RIVER,2026-08-09,2026-08-09T16:00:00+09:00,2026-08-10T00:00:00+09:00,Technical Troubleshooting
+DFO26-CLUB-StageManager-E,CLUB Stage Manager E,stage_manager,stage,DFO26,CLUB,2026-08-07,2026-08-07T10:00:00+09:00,2026-08-07T17:30:00+09:00,Stage Handover;Stage Ready;Performance Start;Performance End
+DFO26-CLUB-StageManager-E,CLUB Stage Manager E,stage_manager,stage,DFO26,CLUB,2026-08-08,2026-08-08T10:00:00+09:00,2026-08-08T17:30:00+09:00,Stage Handover;Stage Ready;Performance Start;Performance End
+DFO26-CLUB-StageManager-E,CLUB Stage Manager E,stage_manager,stage,DFO26,CLUB,2026-08-09,2026-08-09T10:00:00+09:00,2026-08-09T17:30:00+09:00,Stage Handover;Stage Ready;Performance Start;Performance End
+DFO26-CLUB-StageManager-L,CLUB Stage Manager L,stage_manager,stage,DFO26,CLUB,2026-08-07,2026-08-07T16:00:00+09:00,2026-08-08T00:00:00+09:00,Stage Handover;Stage Ready;Performance Start;Performance End
+DFO26-CLUB-StageManager-L,CLUB Stage Manager L,stage_manager,stage,DFO26,CLUB,2026-08-08,2026-08-08T16:00:00+09:00,2026-08-09T00:00:00+09:00,Stage Handover;Stage Ready;Performance Start;Performance End
+DFO26-CLUB-StageManager-L,CLUB Stage Manager L,stage_manager,stage,DFO26,CLUB,2026-08-09,2026-08-09T16:00:00+09:00,2026-08-10T00:00:00+09:00,Stage Handover;Stage Ready;Performance Start;Performance End
+DFO26-CLUB-BacklineTech-E1,CLUB Backline Tech E1,backline_tech,stage,DFO26,CLUB,2026-08-07,2026-08-07T10:00:00+09:00,2026-08-07T17:30:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-CLUB-BacklineTech-E1,CLUB Backline Tech E1,backline_tech,stage,DFO26,CLUB,2026-08-08,2026-08-08T10:00:00+09:00,2026-08-08T17:30:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-CLUB-BacklineTech-E1,CLUB Backline Tech E1,backline_tech,stage,DFO26,CLUB,2026-08-09,2026-08-09T10:00:00+09:00,2026-08-09T17:30:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-CLUB-BacklineTech-E2,CLUB Backline Tech E2,backline_tech,stage,DFO26,CLUB,2026-08-07,2026-08-07T10:00:00+09:00,2026-08-07T17:30:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-CLUB-BacklineTech-E2,CLUB Backline Tech E2,backline_tech,stage,DFO26,CLUB,2026-08-08,2026-08-08T10:00:00+09:00,2026-08-08T17:30:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-CLUB-BacklineTech-E2,CLUB Backline Tech E2,backline_tech,stage,DFO26,CLUB,2026-08-09,2026-08-09T10:00:00+09:00,2026-08-09T17:30:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-CLUB-BacklineTech-L1,CLUB Backline Tech L1,backline_tech,stage,DFO26,CLUB,2026-08-07,2026-08-07T16:00:00+09:00,2026-08-08T00:00:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-CLUB-BacklineTech-L1,CLUB Backline Tech L1,backline_tech,stage,DFO26,CLUB,2026-08-08,2026-08-08T16:00:00+09:00,2026-08-09T00:00:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-CLUB-BacklineTech-L1,CLUB Backline Tech L1,backline_tech,stage,DFO26,CLUB,2026-08-09,2026-08-09T16:00:00+09:00,2026-08-10T00:00:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-CLUB-BacklineTech-L2,CLUB Backline Tech L2,backline_tech,stage,DFO26,CLUB,2026-08-07,2026-08-07T16:00:00+09:00,2026-08-08T00:00:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-CLUB-BacklineTech-L2,CLUB Backline Tech L2,backline_tech,stage,DFO26,CLUB,2026-08-08,2026-08-08T16:00:00+09:00,2026-08-09T00:00:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-CLUB-BacklineTech-L2,CLUB Backline Tech L2,backline_tech,stage,DFO26,CLUB,2026-08-09,2026-08-09T16:00:00+09:00,2026-08-10T00:00:00+09:00,Stage Setup;Technical Troubleshooting
+DFO26-CLUB-MonitorEngineer-E,CLUB Monitor Engineer E,monitor_engineer,stage,DFO26,CLUB,2026-08-07,2026-08-07T10:00:00+09:00,2026-08-07T17:30:00+09:00,Line Check;Technical Troubleshooting
+DFO26-CLUB-MonitorEngineer-E,CLUB Monitor Engineer E,monitor_engineer,stage,DFO26,CLUB,2026-08-08,2026-08-08T10:00:00+09:00,2026-08-08T17:30:00+09:00,Line Check;Technical Troubleshooting
+DFO26-CLUB-MonitorEngineer-E,CLUB Monitor Engineer E,monitor_engineer,stage,DFO26,CLUB,2026-08-09,2026-08-09T10:00:00+09:00,2026-08-09T17:30:00+09:00,Line Check;Technical Troubleshooting
+DFO26-CLUB-MonitorEngineer-L,CLUB Monitor Engineer L,monitor_engineer,stage,DFO26,CLUB,2026-08-07,2026-08-07T16:00:00+09:00,2026-08-08T00:00:00+09:00,Line Check;Technical Troubleshooting
+DFO26-CLUB-MonitorEngineer-L,CLUB Monitor Engineer L,monitor_engineer,stage,DFO26,CLUB,2026-08-08,2026-08-08T16:00:00+09:00,2026-08-09T00:00:00+09:00,Line Check;Technical Troubleshooting
+DFO26-CLUB-MonitorEngineer-L,CLUB Monitor Engineer L,monitor_engineer,stage,DFO26,CLUB,2026-08-09,2026-08-09T16:00:00+09:00,2026-08-10T00:00:00+09:00,Line Check;Technical Troubleshooting
+DFO26-CLUB-FOHEngineer-E,CLUB FOH Engineer E,foh_engineer,stage,DFO26,CLUB,2026-08-07,2026-08-07T10:00:00+09:00,2026-08-07T17:30:00+09:00,Technical Check;Technical Recheck
+DFO26-CLUB-FOHEngineer-E,CLUB FOH Engineer E,foh_engineer,stage,DFO26,CLUB,2026-08-08,2026-08-08T10:00:00+09:00,2026-08-08T17:30:00+09:00,Technical Check;Technical Recheck
+DFO26-CLUB-FOHEngineer-E,CLUB FOH Engineer E,foh_engineer,stage,DFO26,CLUB,2026-08-09,2026-08-09T10:00:00+09:00,2026-08-09T17:30:00+09:00,Technical Check;Technical Recheck
+DFO26-CLUB-FOHEngineer-L,CLUB FOH Engineer L,foh_engineer,stage,DFO26,CLUB,2026-08-07,2026-08-07T16:00:00+09:00,2026-08-08T00:00:00+09:00,Technical Check;Technical Recheck
+DFO26-CLUB-FOHEngineer-L,CLUB FOH Engineer L,foh_engineer,stage,DFO26,CLUB,2026-08-08,2026-08-08T16:00:00+09:00,2026-08-09T00:00:00+09:00,Technical Check;Technical Recheck
+DFO26-CLUB-FOHEngineer-L,CLUB FOH Engineer L,foh_engineer,stage,DFO26,CLUB,2026-08-09,2026-08-09T16:00:00+09:00,2026-08-10T00:00:00+09:00,Technical Check;Technical Recheck
+DFO26-CLUB-LightingOperator-E,CLUB Lighting Operator E,lighting_operator,stage,DFO26,CLUB,2026-08-07,2026-08-07T10:00:00+09:00,2026-08-07T17:30:00+09:00,Technical Troubleshooting
+DFO26-CLUB-LightingOperator-E,CLUB Lighting Operator E,lighting_operator,stage,DFO26,CLUB,2026-08-08,2026-08-08T10:00:00+09:00,2026-08-08T17:30:00+09:00,Technical Troubleshooting
+DFO26-CLUB-LightingOperator-E,CLUB Lighting Operator E,lighting_operator,stage,DFO26,CLUB,2026-08-09,2026-08-09T10:00:00+09:00,2026-08-09T17:30:00+09:00,Technical Troubleshooting
+DFO26-CLUB-LightingOperator-L,CLUB Lighting Operator L,lighting_operator,stage,DFO26,CLUB,2026-08-07,2026-08-07T16:00:00+09:00,2026-08-08T00:00:00+09:00,Technical Troubleshooting
+DFO26-CLUB-LightingOperator-L,CLUB Lighting Operator L,lighting_operator,stage,DFO26,CLUB,2026-08-08,2026-08-08T16:00:00+09:00,2026-08-09T00:00:00+09:00,Technical Troubleshooting
+DFO26-CLUB-LightingOperator-L,CLUB Lighting Operator L,lighting_operator,stage,DFO26,CLUB,2026-08-09,2026-08-09T16:00:00+09:00,2026-08-10T00:00:00+09:00,Technical Troubleshooting
+DFO26-NG-LaneChecker-1,Lane Checker 1,ticket_checker,audience,DFO26,NG-L1,2026-08-07,2026-08-07T11:30:00+09:00,2026-08-07T15:30:00+09:00,Ticket Verification
+DFO26-NG-LaneChecker-1,Lane Checker 1,ticket_checker,audience,DFO26,NG-L1,2026-08-08,2026-08-08T11:30:00+09:00,2026-08-08T15:30:00+09:00,Ticket Verification
+DFO26-NG-LaneChecker-2,Lane Checker 2,ticket_checker,audience,DFO26,NG-L2,2026-08-07,2026-08-07T11:30:00+09:00,2026-08-07T15:30:00+09:00,Ticket Verification
+DFO26-NG-LaneChecker-2,Lane Checker 2,ticket_checker,audience,DFO26,NG-L2,2026-08-08,2026-08-08T11:30:00+09:00,2026-08-08T15:30:00+09:00,Ticket Verification
+DFO26-NG-LaneChecker-3,Lane Checker 3,ticket_checker,audience,DFO26,NG-L3,2026-08-07,2026-08-07T11:30:00+09:00,2026-08-07T15:30:00+09:00,Ticket Verification
+DFO26-NG-LaneChecker-3,Lane Checker 3,ticket_checker,audience,DFO26,NG-L3,2026-08-08,2026-08-08T11:30:00+09:00,2026-08-08T15:30:00+09:00,Ticket Verification
+DFO26-NG-TicketSupport-1,Ticket Support 1,ticket_supervisor,audience,DFO26,NG-DESK,2026-08-07,2026-08-07T11:30:00+09:00,2026-08-07T15:30:00+09:00,Manual Ticket Check;Entry Rejected
+DFO26-NG-TicketSupport-1,Ticket Support 1,ticket_supervisor,audience,DFO26,NG-DESK,2026-08-08,2026-08-08T11:30:00+09:00,2026-08-08T15:30:00+09:00,Manual Ticket Check;Entry Rejected
+DFO26-NG-TicketSupport-2,Ticket Support 2,ticket_supervisor,audience,DFO26,NG-DESK,2026-08-07,2026-08-07T11:30:00+09:00,2026-08-07T15:30:00+09:00,Manual Ticket Check;Entry Rejected
+DFO26-NG-TicketSupport-2,Ticket Support 2,ticket_supervisor,audience,DFO26,NG-DESK,2026-08-08,2026-08-08T11:30:00+09:00,2026-08-08T15:30:00+09:00,Manual Ticket Check;Entry Rejected
+DFO26-NG-WristbandSteward-1,Wristband Steward 1,wristband_steward,audience,DFO26,NG-WB,2026-08-07,2026-08-07T11:30:00+09:00,2026-08-07T15:30:00+09:00,Wristband Check;Entry Rejected
+DFO26-NG-WristbandSteward-1,Wristband Steward 1,wristband_steward,audience,DFO26,NG-WB,2026-08-08,2026-08-08T11:30:00+09:00,2026-08-08T15:30:00+09:00,Wristband Check;Entry Rejected
+DFO26-NG-SecurityScreener-1,Security Screener 1,security_screener,audience,DFO26,NG-SEC,2026-08-07,2026-08-07T11:30:00+09:00,2026-08-07T15:30:00+09:00,Security Check
+DFO26-NG-SecurityScreener-1,Security Screener 1,security_screener,audience,DFO26,NG-SEC,2026-08-08,2026-08-08T11:30:00+09:00,2026-08-08T15:30:00+09:00,Security Check
+DFO26-NG-SecurityScreener-2,Security Screener 2,security_screener,audience,DFO26,NG-SEC,2026-08-07,2026-08-07T11:30:00+09:00,2026-08-07T15:30:00+09:00,Security Check
+DFO26-NG-SecurityScreener-2,Security Screener 2,security_screener,audience,DFO26,NG-SEC,2026-08-08,2026-08-08T11:30:00+09:00,2026-08-08T15:30:00+09:00,Security Check
+DFO26-NG-SecurityScreener-3,Security Screener 3,security_screener,audience,DFO26,NG-SEC,2026-08-07,2026-08-07T11:30:00+09:00,2026-08-07T15:30:00+09:00,Security Check
+DFO26-NG-SecurityScreener-3,Security Screener 3,security_screener,audience,DFO26,NG-SEC,2026-08-08,2026-08-08T11:30:00+09:00,2026-08-08T15:30:00+09:00,Security Check
+DFO26-NG-SecurityScreener-4,Security Screener 4,security_screener,audience,DFO26,NG-SEC,2026-08-07,2026-08-07T11:30:00+09:00,2026-08-07T15:30:00+09:00,Security Check
+DFO26-NG-SecurityScreener-4,Security Screener 4,security_screener,audience,DFO26,NG-SEC,2026-08-08,2026-08-08T11:30:00+09:00,2026-08-08T15:30:00+09:00,Security Check
+DFO26-NG-SecuritySupervisor-1,Security Supervisor 1,security_supervisor,audience,DFO26,NG-SEC,2026-08-07,2026-08-07T11:30:00+09:00,2026-08-07T15:30:00+09:00,Additional Screening;Entry Rejected
+DFO26-NG-SecuritySupervisor-1,Security Supervisor 1,security_supervisor,audience,DFO26,NG-SEC,2026-08-08,2026-08-08T11:30:00+09:00,2026-08-08T15:30:00+09:00,Additional Screening;Entry Rejected
+DFO26-PROD-Coordinator-A,Production Coordinator A,production_coordinator,equipment,DFO26,PROD,2026-08-07,2026-08-07T07:30:00+09:00,2026-08-07T15:30:00+09:00,Equipment Requested
+DFO26-PROD-Coordinator-A,Production Coordinator A,production_coordinator,equipment,DFO26,PROD,2026-08-08,2026-08-08T07:30:00+09:00,2026-08-08T15:30:00+09:00,Equipment Requested
+DFO26-PROD-Coordinator-A,Production Coordinator A,production_coordinator,equipment,DFO26,PROD,2026-08-09,2026-08-09T07:30:00+09:00,2026-08-09T15:30:00+09:00,Equipment Requested
+DFO26-PROD-Coordinator-B,Production Coordinator B,production_coordinator,equipment,DFO26,PROD,2026-08-07,2026-08-07T14:30:00+09:00,2026-08-07T23:00:00+09:00,Equipment Requested
+DFO26-PROD-Coordinator-B,Production Coordinator B,production_coordinator,equipment,DFO26,PROD,2026-08-08,2026-08-08T14:30:00+09:00,2026-08-08T23:00:00+09:00,Equipment Requested
+DFO26-PROD-Coordinator-B,Production Coordinator B,production_coordinator,equipment,DFO26,PROD,2026-08-09,2026-08-09T14:30:00+09:00,2026-08-09T23:00:00+09:00,Equipment Requested
+DFO26-EQ-Manager-1,Equipment Manager 1,equipment_manager,equipment,DFO26,BACKLINE-STORE,2026-08-07,2026-08-07T07:30:00+09:00,2026-08-07T16:30:00+09:00,Availability Check;Substitute Search;Equipment Allocation
+DFO26-EQ-Manager-1,Equipment Manager 1,equipment_manager,equipment,DFO26,BACKLINE-STORE,2026-08-08,2026-08-08T07:30:00+09:00,2026-08-08T16:30:00+09:00,Availability Check;Substitute Search;Equipment Allocation
+DFO26-EQ-Manager-1,Equipment Manager 1,equipment_manager,equipment,DFO26,BACKLINE-STORE,2026-08-09,2026-08-09T07:30:00+09:00,2026-08-09T16:30:00+09:00,Availability Check;Substitute Search;Equipment Allocation
+DFO26-EQ-Manager-2,Equipment Manager 2,equipment_manager,equipment,DFO26,BACKLINE-STORE,2026-08-07,2026-08-07T07:30:00+09:00,2026-08-07T16:30:00+09:00,Availability Check;Substitute Search;Equipment Allocation
+DFO26-EQ-Manager-2,Equipment Manager 2,equipment_manager,equipment,DFO26,BACKLINE-STORE,2026-08-08,2026-08-08T07:30:00+09:00,2026-08-08T16:30:00+09:00,Availability Check;Substitute Search;Equipment Allocation
+DFO26-EQ-Manager-2,Equipment Manager 2,equipment_manager,equipment,DFO26,BACKLINE-STORE,2026-08-09,2026-08-09T07:30:00+09:00,2026-08-09T16:30:00+09:00,Availability Check;Substitute Search;Equipment Allocation
+DFO26-EQ-Manager-3,Equipment Manager 3,equipment_manager,equipment,DFO26,BACKLINE-STORE,2026-08-07,2026-08-07T13:00:00+09:00,2026-08-07T23:00:00+09:00,Availability Check;Substitute Search;Equipment Allocation
+DFO26-EQ-Manager-3,Equipment Manager 3,equipment_manager,equipment,DFO26,BACKLINE-STORE,2026-08-08,2026-08-08T13:00:00+09:00,2026-08-08T23:00:00+09:00,Availability Check;Substitute Search;Equipment Allocation
+DFO26-EQ-Manager-3,Equipment Manager 3,equipment_manager,equipment,DFO26,BACKLINE-STORE,2026-08-09,2026-08-09T13:00:00+09:00,2026-08-09T23:00:00+09:00,Availability Check;Substitute Search;Equipment Allocation
+DFO26-EQ-Logistics-1,Logistics Crew 1,logistics_crew,equipment,DFO26,SITE,2026-08-07,2026-08-07T07:30:00+09:00,2026-08-07T16:30:00+09:00,Equipment Transport
+DFO26-EQ-Logistics-1,Logistics Crew 1,logistics_crew,equipment,DFO26,SITE,2026-08-08,2026-08-08T07:30:00+09:00,2026-08-08T16:30:00+09:00,Equipment Transport
+DFO26-EQ-Logistics-1,Logistics Crew 1,logistics_crew,equipment,DFO26,SITE,2026-08-09,2026-08-09T07:30:00+09:00,2026-08-09T16:30:00+09:00,Equipment Transport
+DFO26-EQ-Logistics-2,Logistics Crew 2,logistics_crew,equipment,DFO26,SITE,2026-08-07,2026-08-07T07:30:00+09:00,2026-08-07T16:30:00+09:00,Equipment Transport
+DFO26-EQ-Logistics-2,Logistics Crew 2,logistics_crew,equipment,DFO26,SITE,2026-08-08,2026-08-08T07:30:00+09:00,2026-08-08T16:30:00+09:00,Equipment Transport
+DFO26-EQ-Logistics-2,Logistics Crew 2,logistics_crew,equipment,DFO26,SITE,2026-08-09,2026-08-09T07:30:00+09:00,2026-08-09T16:30:00+09:00,Equipment Transport
+DFO26-EQ-Logistics-3,Logistics Crew 3,logistics_crew,equipment,DFO26,SITE,2026-08-07,2026-08-07T13:00:00+09:00,2026-08-07T23:00:00+09:00,Equipment Transport
+DFO26-EQ-Logistics-3,Logistics Crew 3,logistics_crew,equipment,DFO26,SITE,2026-08-08,2026-08-08T13:00:00+09:00,2026-08-08T23:00:00+09:00,Equipment Transport
+DFO26-EQ-Logistics-3,Logistics Crew 3,logistics_crew,equipment,DFO26,SITE,2026-08-09,2026-08-09T13:00:00+09:00,2026-08-09T23:00:00+09:00,Equipment Transport
+DFO26-EQ-Logistics-4,Logistics Crew 4,logistics_crew,equipment,DFO26,SITE,2026-08-07,2026-08-07T13:00:00+09:00,2026-08-07T23:00:00+09:00,Equipment Transport
+DFO26-EQ-Logistics-4,Logistics Crew 4,logistics_crew,equipment,DFO26,SITE,2026-08-08,2026-08-08T13:00:00+09:00,2026-08-08T23:00:00+09:00,Equipment Transport
+DFO26-EQ-Logistics-4,Logistics Crew 4,logistics_crew,equipment,DFO26,SITE,2026-08-09,2026-08-09T13:00:00+09:00,2026-08-09T23:00:00+09:00,Equipment Transport
+DFO26-EQ-BacklineQC-1,Backline QC Tech 1,backline_qc_tech,equipment,DFO26,STAGE-DOCK,2026-08-07,2026-08-07T08:00:00+09:00,2026-08-07T16:30:00+09:00,Pre-use Inspection;Inspection Rework;Equipment Ready
+DFO26-EQ-BacklineQC-1,Backline QC Tech 1,backline_qc_tech,equipment,DFO26,STAGE-DOCK,2026-08-08,2026-08-08T08:00:00+09:00,2026-08-08T16:30:00+09:00,Pre-use Inspection;Inspection Rework;Equipment Ready
+DFO26-EQ-BacklineQC-1,Backline QC Tech 1,backline_qc_tech,equipment,DFO26,STAGE-DOCK,2026-08-09,2026-08-09T08:00:00+09:00,2026-08-09T16:30:00+09:00,Pre-use Inspection;Inspection Rework;Equipment Ready
+DFO26-EQ-BacklineQC-2,Backline QC Tech 2,backline_qc_tech,equipment,DFO26,STAGE-DOCK,2026-08-07,2026-08-07T08:00:00+09:00,2026-08-07T16:30:00+09:00,Pre-use Inspection;Inspection Rework;Equipment Ready
+DFO26-EQ-BacklineQC-2,Backline QC Tech 2,backline_qc_tech,equipment,DFO26,STAGE-DOCK,2026-08-08,2026-08-08T08:00:00+09:00,2026-08-08T16:30:00+09:00,Pre-use Inspection;Inspection Rework;Equipment Ready
+DFO26-EQ-BacklineQC-2,Backline QC Tech 2,backline_qc_tech,equipment,DFO26,STAGE-DOCK,2026-08-09,2026-08-09T08:00:00+09:00,2026-08-09T16:30:00+09:00,Pre-use Inspection;Inspection Rework;Equipment Ready
+DFO26-EQ-BacklineQC-3,Backline QC Tech 3,backline_qc_tech,equipment,DFO26,STAGE-DOCK,2026-08-07,2026-08-07T13:00:00+09:00,2026-08-07T23:00:00+09:00,Pre-use Inspection;Inspection Rework;Equipment Ready
+DFO26-EQ-BacklineQC-3,Backline QC Tech 3,backline_qc_tech,equipment,DFO26,STAGE-DOCK,2026-08-08,2026-08-08T13:00:00+09:00,2026-08-08T23:00:00+09:00,Pre-use Inspection;Inspection Rework;Equipment Ready
+DFO26-EQ-BacklineQC-3,Backline QC Tech 3,backline_qc_tech,equipment,DFO26,STAGE-DOCK,2026-08-09,2026-08-09T13:00:00+09:00,2026-08-09T23:00:00+09:00,Pre-use Inspection;Inspection Rework;Equipment Ready

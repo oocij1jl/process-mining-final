@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_StageAsIs" targetNamespace="https://processpilot.example/festival/StageAsIs" exporter="generate_festival_logs.py" exporterVersion="1.0.0">
+  <bpmn:collaboration id="Collaboration_StageAsIs">
+    <bpmn:participant id="Participant_StageAsIs" name="Stage &amp; Technical Operations — per performance (As-is)" processRef="Process_StageAsIs"/>
+    <bpmn:participant id="Participant_Artist" name="Artist / Tour Crew (external)"/>
+    <bpmn:participant id="Participant_Equipment" name="Equipment &amp; Technical Readiness (see equipment_as_is.bpmn)"/>
+    <bpmn:messageFlow id="MsgFlow_ArtistArrives" name="Artist crew &amp; gear at stage" sourceRef="Participant_Artist" targetRef="Task_StageHandover"/>
+    <bpmn:messageFlow id="MsgFlow_WalkOn" name="Walk-on cue" sourceRef="Task_PerformanceStart" targetRef="Participant_Artist"/>
+    <bpmn:messageFlow id="MsgFlow_EquipmentReady" name="Equipment Ready notice (per linked request)" sourceRef="Participant_Equipment" targetRef="Task_StageSetup"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_StageAsIs" name="Stage &amp; Technical Operations (As-is)" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_StageAsIs">
+      <bpmn:lane id="Lane_StageManager" name="Stage Manager">
+        <bpmn:flowNodeRef>Start_Changeover</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_StageHandover</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_ReadyMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_StageReady</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PerformanceStart</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PerformanceEnd</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_PerformanceDone</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Backline" name="Backline Technician">
+        <bpmn:flowNodeRef>Task_StageSetup</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Monitor" name="Monitor Engineer">
+        <bpmn:flowNodeRef>Gw_LineCheckNeeded</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_LineCheck</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_LineCheckMerge</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_FOH" name="FOH Engineer">
+        <bpmn:flowNodeRef>Task_TechnicalCheck</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_TechCheckPassed</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_TechnicalRecheck</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_RecheckPassed</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_IssueOwner" name="Issue Owner (by issue type)">
+        <bpmn:flowNodeRef>Gw_TroubleshootMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_TechnicalTroubleshooting</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Changeover" name="Changeover slot begins">
+      <bpmn:outgoing>Flow_S01</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_StageHandover" name="Stage Handover">
+      <bpmn:incoming>Flow_S01</bpmn:incoming>
+      <bpmn:outgoing>Flow_S02</bpmn:outgoing>
+      <bpmn:property id="Property_Task_StageHandover" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="DIA_DataObject_RunOfShow_Task_StageHandover">
+        <bpmn:sourceRef>DataObject_RunOfShow</bpmn:sourceRef>
+        <bpmn:targetRef>Property_Task_StageHandover</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+    </bpmn:userTask>
+    <bpmn:manualTask id="Task_StageSetup" name="Stage Setup">
+      <bpmn:incoming>Flow_S02</bpmn:incoming>
+      <bpmn:outgoing>Flow_S03</bpmn:outgoing>
+      <bpmn:property id="Property_Task_StageSetup" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="DIA_DataObject_StagePlot_Task_StageSetup">
+        <bpmn:sourceRef>DataObject_StagePlot</bpmn:sourceRef>
+        <bpmn:targetRef>Property_Task_StageSetup</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+    </bpmn:manualTask>
+    <bpmn:exclusiveGateway id="Gw_LineCheckNeeded" name="Line check performed?">
+      <bpmn:incoming>Flow_S03</bpmn:incoming>
+      <bpmn:outgoing>Flow_S04</bpmn:outgoing>
+      <bpmn:outgoing>Flow_S05</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:manualTask id="Task_LineCheck" name="Line Check">
+      <bpmn:incoming>Flow_S04</bpmn:incoming>
+      <bpmn:outgoing>Flow_S06</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:exclusiveGateway id="Gw_LineCheckMerge" name="">
+      <bpmn:incoming>Flow_S05</bpmn:incoming>
+      <bpmn:incoming>Flow_S06</bpmn:incoming>
+      <bpmn:outgoing>Flow_S07</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_TechnicalCheck" name="Technical Check">
+      <bpmn:incoming>Flow_S07</bpmn:incoming>
+      <bpmn:outgoing>Flow_S08</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gw_TechCheckPassed" name="Technical check passed?">
+      <bpmn:incoming>Flow_S08</bpmn:incoming>
+      <bpmn:outgoing>Flow_S09</bpmn:outgoing>
+      <bpmn:outgoing>Flow_S10</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gw_TroubleshootMerge" name="">
+      <bpmn:incoming>Flow_S10</bpmn:incoming>
+      <bpmn:incoming>Flow_S15</bpmn:incoming>
+      <bpmn:outgoing>Flow_S11</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:manualTask id="Task_TechnicalTroubleshooting" name="Technical Troubleshooting">
+      <bpmn:incoming>Flow_S11</bpmn:incoming>
+      <bpmn:outgoing>Flow_S12</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:userTask id="Task_TechnicalRecheck" name="Technical Recheck">
+      <bpmn:incoming>Flow_S12</bpmn:incoming>
+      <bpmn:outgoing>Flow_S13</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gw_RecheckPassed" name="Recheck passed?">
+      <bpmn:incoming>Flow_S13</bpmn:incoming>
+      <bpmn:outgoing>Flow_S14</bpmn:outgoing>
+      <bpmn:outgoing>Flow_S15</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gw_ReadyMerge" name="">
+      <bpmn:incoming>Flow_S09</bpmn:incoming>
+      <bpmn:incoming>Flow_S14</bpmn:incoming>
+      <bpmn:outgoing>Flow_S16</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_StageReady" name="Stage Ready">
+      <bpmn:incoming>Flow_S16</bpmn:incoming>
+      <bpmn:outgoing>Flow_S17</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sendTask id="Task_PerformanceStart" name="Performance Start">
+      <bpmn:incoming>Flow_S17</bpmn:incoming>
+      <bpmn:outgoing>Flow_S18</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:userTask id="Task_PerformanceEnd" name="Performance End">
+      <bpmn:incoming>Flow_S18</bpmn:incoming>
+      <bpmn:outgoing>Flow_S19</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_PerformanceDone" name="Performance completed">
+      <bpmn:incoming>Flow_S19</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_S01" sourceRef="Start_Changeover" targetRef="Task_StageHandover"/>
+    <bpmn:sequenceFlow id="Flow_S02" sourceRef="Task_StageHandover" targetRef="Task_StageSetup"/>
+    <bpmn:sequenceFlow id="Flow_S03" sourceRef="Task_StageSetup" targetRef="Gw_LineCheckNeeded"/>
+    <bpmn:sequenceFlow id="Flow_S04" name="yes" sourceRef="Gw_LineCheckNeeded" targetRef="Task_LineCheck"/>
+    <bpmn:sequenceFlow id="Flow_S05" name="no" sourceRef="Gw_LineCheckNeeded" targetRef="Gw_LineCheckMerge"/>
+    <bpmn:sequenceFlow id="Flow_S06" sourceRef="Task_LineCheck" targetRef="Gw_LineCheckMerge"/>
+    <bpmn:sequenceFlow id="Flow_S07" sourceRef="Gw_LineCheckMerge" targetRef="Task_TechnicalCheck"/>
+    <bpmn:sequenceFlow id="Flow_S08" sourceRef="Task_TechnicalCheck" targetRef="Gw_TechCheckPassed"/>
+    <bpmn:sequenceFlow id="Flow_S09" name="yes" sourceRef="Gw_TechCheckPassed" targetRef="Gw_ReadyMerge"/>
+    <bpmn:sequenceFlow id="Flow_S10" name="no" sourceRef="Gw_TechCheckPassed" targetRef="Gw_TroubleshootMerge"/>
+    <bpmn:sequenceFlow id="Flow_S11" sourceRef="Gw_TroubleshootMerge" targetRef="Task_TechnicalTroubleshooting"/>
+    <bpmn:sequenceFlow id="Flow_S12" sourceRef="Task_TechnicalTroubleshooting" targetRef="Task_TechnicalRecheck"/>
+    <bpmn:sequenceFlow id="Flow_S13" sourceRef="Task_TechnicalRecheck" targetRef="Gw_RecheckPassed"/>
+    <bpmn:sequenceFlow id="Flow_S14" name="yes" sourceRef="Gw_RecheckPassed" targetRef="Gw_ReadyMerge"/>
+    <bpmn:sequenceFlow id="Flow_S15" name="no" sourceRef="Gw_RecheckPassed" targetRef="Gw_TroubleshootMerge"/>
+    <bpmn:sequenceFlow id="Flow_S16" sourceRef="Gw_ReadyMerge" targetRef="Task_StageReady"/>
+    <bpmn:sequenceFlow id="Flow_S17" sourceRef="Task_StageReady" targetRef="Task_PerformanceStart"/>
+    <bpmn:sequenceFlow id="Flow_S18" sourceRef="Task_PerformanceStart" targetRef="Task_PerformanceEnd"/>
+    <bpmn:sequenceFlow id="Flow_S19" sourceRef="Task_PerformanceEnd" targetRef="End_PerformanceDone"/>
+    <bpmn:dataObject id="DataObject_DataObject_RunOfShow"/>
+    <bpmn:dataObjectReference id="DataObject_RunOfShow" name="Run-of-show (scheduled_start)" dataObjectRef="DataObject_DataObject_RunOfShow"/>
+    <bpmn:dataObject id="DataObject_DataObject_StagePlot"/>
+    <bpmn:dataObjectReference id="DataObject_StagePlot" name="Stage plot / technical rider" dataObjectRef="DataObject_DataObject_StagePlot"/>
+    <bpmn:textAnnotation id="Note_LineCheck">
+      <bpmn:text>Line Check only for band acts; skipped for DJ/playback sets and, with p=0.6, when setup ends inside the compressed-changeover threshold. Headliner full soundcheck happens earlier in the day (outside this case).</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_Note_LineCheck" associationDirection="None" sourceRef="Gw_LineCheckMerge" targetRef="Note_LineCheck"/>
+    <bpmn:textAnnotation id="Note_IssueOwner">
+      <bpmn:text>Issue owner by issue_type: monitor_mix / wireless_rf -&gt; Monitor Engineer; signal_path -&gt; Backline Tech; lighting_cue -&gt; Lighting Operator. Recheck loop max 3.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_Note_IssueOwner" associationDirection="None" sourceRef="Task_TechnicalTroubleshooting" targetRef="Note_IssueOwner"/>
+    <bpmn:textAnnotation id="Note_Setup">
+      <bpmn:text>Setup cannot complete before all linked equipment is Equipment Ready (+2-5 min install).</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_Note_Setup" associationDirection="None" sourceRef="Task_StageSetup" targetRef="Note_Setup"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_StageAsIs">
+    <bpmndi:BPMNPlane id="BPMNPlane_StageAsIs" bpmnElement="Collaboration_StageAsIs">
+      <bpmndi:BPMNShape id="Participant_StageAsIs_di" bpmnElement="Participant_StageAsIs" isHorizontal="true">
+        <dc:Bounds x="160" y="150" width="2912" height="750"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_StageManager_di" bpmnElement="Lane_StageManager" isHorizontal="true">
+        <dc:Bounds x="190" y="150" width="2882" height="150"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Backline_di" bpmnElement="Lane_Backline" isHorizontal="true">
+        <dc:Bounds x="190" y="300" width="2882" height="140"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Monitor_di" bpmnElement="Lane_Monitor" isHorizontal="true">
+        <dc:Bounds x="190" y="440" width="2882" height="150"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_FOH_di" bpmnElement="Lane_FOH" isHorizontal="true">
+        <dc:Bounds x="190" y="590" width="2882" height="150"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_IssueOwner_di" bpmnElement="Lane_IssueOwner" isHorizontal="true">
+        <dc:Bounds x="190" y="740" width="2882" height="160"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Artist_di" bpmnElement="Participant_Artist" isHorizontal="true">
+        <dc:Bounds x="160" y="40" width="2912" height="60"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Equipment_di" bpmnElement="Participant_Equipment" isHorizontal="true">
+        <dc:Bounds x="160" y="950" width="2912" height="60"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Changeover_di" bpmnElement="Start_Changeover">
+        <dc:Bounds x="272" y="207" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="230" y="247" width="120" height="40"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_StageHandover_di" bpmnElement="Task_StageHandover">
+        <dc:Bounds x="390" y="185" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_StageSetup_di" bpmnElement="Task_StageSetup">
+        <dc:Bounds x="555" y="330" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_LineCheckNeeded_di" bpmnElement="Gw_LineCheckNeeded" isMarkerVisible="true">
+        <dc:Bounds x="760" y="490" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="715" y="448" width="140" height="36"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_LineCheck_di" bpmnElement="Task_LineCheck">
+        <dc:Bounds x="885" y="475" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_LineCheckMerge_di" bpmnElement="Gw_LineCheckMerge" isMarkerVisible="true">
+        <dc:Bounds x="1090" y="490" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_TechnicalCheck_di" bpmnElement="Task_TechnicalCheck">
+        <dc:Bounds x="1215" y="625" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_TechCheckPassed_di" bpmnElement="Gw_TechCheckPassed" isMarkerVisible="true">
+        <dc:Bounds x="1420" y="640" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1375" y="598" width="140" height="36"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_TroubleshootMerge_di" bpmnElement="Gw_TroubleshootMerge" isMarkerVisible="true">
+        <dc:Bounds x="1585" y="795" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_TechnicalTroubleshooting_di" bpmnElement="Task_TechnicalTroubleshooting">
+        <dc:Bounds x="1710" y="780" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_TechnicalRecheck_di" bpmnElement="Task_TechnicalRecheck">
+        <dc:Bounds x="1875" y="625" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_RecheckPassed_di" bpmnElement="Gw_RecheckPassed" isMarkerVisible="true">
+        <dc:Bounds x="2080" y="640" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2035" y="598" width="140" height="36"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_ReadyMerge_di" bpmnElement="Gw_ReadyMerge" isMarkerVisible="true">
+        <dc:Bounds x="2245" y="200" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_StageReady_di" bpmnElement="Task_StageReady">
+        <dc:Bounds x="2370" y="185" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PerformanceStart_di" bpmnElement="Task_PerformanceStart">
+        <dc:Bounds x="2535" y="185" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PerformanceEnd_di" bpmnElement="Task_PerformanceEnd">
+        <dc:Bounds x="2700" y="185" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_PerformanceDone_di" bpmnElement="End_PerformanceDone">
+        <dc:Bounds x="2912" y="207" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2870" y="247" width="120" height="40"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataObject_RunOfShow_di" bpmnElement="DataObject_RunOfShow">
+        <dc:Bounds x="668" y="192" width="36" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="626" y="245" width="120" height="28"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataObject_StagePlot_di" bpmnElement="DataObject_StagePlot">
+        <dc:Bounds x="457" y="345" width="36" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="415" y="398" width="120" height="28"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Note_LineCheck_di" bpmnElement="Note_LineCheck">
+        <dc:Bounds x="1559" y="465" width="300" height="84"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Note_IssueOwner_di" bpmnElement="Note_IssueOwner">
+        <dc:Bounds x="2160" y="785" width="300" height="70"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Note_Setup_di" bpmnElement="Note_Setup">
+        <dc:Bounds x="880" y="342" width="260" height="56"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_S01_di" bpmnElement="Flow_S01">
+        <di:waypoint x="308" y="225"/>
+        <di:waypoint x="390" y="225"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S02_di" bpmnElement="Flow_S02">
+        <di:waypoint x="520" y="225"/>
+        <di:waypoint x="538" y="225"/>
+        <di:waypoint x="538" y="370"/>
+        <di:waypoint x="555" y="370"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S03_di" bpmnElement="Flow_S03">
+        <di:waypoint x="685" y="370"/>
+        <di:waypoint x="722" y="370"/>
+        <di:waypoint x="722" y="515"/>
+        <di:waypoint x="760" y="515"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S04_di" bpmnElement="Flow_S04">
+        <di:waypoint x="810" y="515"/>
+        <di:waypoint x="885" y="515"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="852" y="497" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S05_di" bpmnElement="Flow_S05">
+        <di:waypoint x="785" y="540"/>
+        <di:waypoint x="785" y="574"/>
+        <di:waypoint x="1115" y="574"/>
+        <di:waypoint x="1115" y="540"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="789" y="539" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S06_di" bpmnElement="Flow_S06">
+        <di:waypoint x="1015" y="515"/>
+        <di:waypoint x="1090" y="515"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S07_di" bpmnElement="Flow_S07">
+        <di:waypoint x="1115" y="540"/>
+        <di:waypoint x="1115" y="665"/>
+        <di:waypoint x="1215" y="665"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S08_di" bpmnElement="Flow_S08">
+        <di:waypoint x="1345" y="665"/>
+        <di:waypoint x="1420" y="665"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S09_di" bpmnElement="Flow_S09">
+        <di:waypoint x="1445" y="640"/>
+        <di:waypoint x="1445" y="225"/>
+        <di:waypoint x="2245" y="225"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1449" y="414" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S10_di" bpmnElement="Flow_S10">
+        <di:waypoint x="1445" y="690"/>
+        <di:waypoint x="1445" y="820"/>
+        <di:waypoint x="1585" y="820"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1449" y="737" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S11_di" bpmnElement="Flow_S11">
+        <di:waypoint x="1635" y="820"/>
+        <di:waypoint x="1710" y="820"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S12_di" bpmnElement="Flow_S12">
+        <di:waypoint x="1840" y="820"/>
+        <di:waypoint x="1858" y="820"/>
+        <di:waypoint x="1858" y="665"/>
+        <di:waypoint x="1875" y="665"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S13_di" bpmnElement="Flow_S13">
+        <di:waypoint x="2005" y="665"/>
+        <di:waypoint x="2080" y="665"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S14_di" bpmnElement="Flow_S14">
+        <di:waypoint x="2105" y="640"/>
+        <di:waypoint x="2105" y="225"/>
+        <di:waypoint x="2245" y="225"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2109" y="414" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S15_di" bpmnElement="Flow_S15">
+        <di:waypoint x="2105" y="690"/>
+        <di:waypoint x="2105" y="869"/>
+        <di:waypoint x="1610" y="869"/>
+        <di:waypoint x="1610" y="845"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2109" y="762" width="40" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S16_di" bpmnElement="Flow_S16">
+        <di:waypoint x="2295" y="225"/>
+        <di:waypoint x="2370" y="225"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S17_di" bpmnElement="Flow_S17">
+        <di:waypoint x="2500" y="225"/>
+        <di:waypoint x="2535" y="225"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S18_di" bpmnElement="Flow_S18">
+        <di:waypoint x="2665" y="225"/>
+        <di:waypoint x="2700" y="225"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_S19_di" bpmnElement="Flow_S19">
+        <di:waypoint x="2830" y="225"/>
+        <di:waypoint x="2912" y="225"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MsgFlow_ArtistArrives_di" bpmnElement="MsgFlow_ArtistArrives">
+        <di:waypoint x="455" y="100"/>
+        <di:waypoint x="455" y="185"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="461" y="108" width="150" height="28"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MsgFlow_WalkOn_di" bpmnElement="MsgFlow_WalkOn">
+        <di:waypoint x="2600" y="185"/>
+        <di:waypoint x="2600" y="100"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2606" y="108" width="150" height="28"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MsgFlow_EquipmentReady_di" bpmnElement="MsgFlow_EquipmentReady">
+        <di:waypoint x="620" y="950"/>
+        <di:waypoint x="620" y="410"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="626" y="418" width="150" height="28"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DIA_DataObject_RunOfShow_Task_StageHandover_di" bpmnElement="DIA_DataObject_RunOfShow_Task_StageHandover">
+        <di:waypoint x="668" y="217"/>
+        <di:waypoint x="520" y="217"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DIA_DataObject_StagePlot_Task_StageSetup_di" bpmnElement="DIA_DataObject_StagePlot_Task_StageSetup">
+        <di:waypoint x="493" y="370"/>
+        <di:waypoint x="555" y="370"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_Note_LineCheck_di" bpmnElement="Association_Note_LineCheck">
+        <di:waypoint x="1115" y="490"/>
+        <di:waypoint x="1559" y="507"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_Note_IssueOwner_di" bpmnElement="Association_Note_IssueOwner">
+        <di:waypoint x="1775" y="780"/>
+        <di:waypoint x="2160" y="820"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_Note_Setup_di" bpmnElement="Association_Note_Setup">
+        <di:waypoint x="620" y="330"/>
+        <di:waypoint x="880" y="370"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -111,8 +111,10 @@ describe('Independent Phase 1 review cases', () => {
     expect(result.resources.map(r => [r.resource, r.rawEvents, r.instances, r.distinctCases, r.activeMin]))
       .toEqual([['R1', 6, 4, 2, 4], ['R2', 4, 3, 3, 1], ['R3', 1, 1, 1, null]]);
     expect(result.handoffs).toEqual([
-      { from: 'R1', to: 'R2', count: 2, caseKeys: [key('014'), key('018')] },
-      { from: 'R2', to: 'R3', count: 1, caseKeys: [key('018')] },
+      { from: 'R1', to: 'R2', count: 2, caseKeys: [key('014'), key('018')],
+      activityPairs: [{ from: 'Cut', to: 'Pack', count: 2, caseKeys: [key('014'), key('018')] }] },
+      { from: 'R2', to: 'R3', count: 1, caseKeys: [key('018')],
+      activityPairs: [{ from: 'Pack', to: 'Hold', count: 1, caseKeys: [key('018')] }] },
     ]);
   });
 
@@ -397,9 +399,12 @@ test('local, shared and unscoped identities are consistent across handoffs, find
     { resource: localSouth, activeMin: 5, instances: 2, caseKeys: [key('S1')] },
   ]);
   expect(analysis.handoffs).toEqual([
-    { from: localNorth, to: shared, count: 1, caseKeys: [key('N1')] },
-    { from: localSouth, to: shared, count: 1, caseKeys: [key('S1')] },
-    { from: shared, to: localSouth, count: 1, caseKeys: [key('S1')] },
+    { from: localNorth, to: shared, count: 1, caseKeys: [key('N1')],
+      activityPairs: [{ from: 'Local Job', to: 'Shared Job', count: 1, caseKeys: [key('N1')] }] },
+    { from: localSouth, to: shared, count: 1, caseKeys: [key('S1')],
+      activityPairs: [{ from: 'Local Job', to: 'Shared Job', count: 1, caseKeys: [key('S1')] }] },
+    { from: shared, to: localSouth, count: 1, caseKeys: [key('S1')],
+      activityPairs: [{ from: 'Shared Job', to: 'Return', count: 1, caseKeys: [key('S1')] }] },
   ]);
 
   const shifts = [

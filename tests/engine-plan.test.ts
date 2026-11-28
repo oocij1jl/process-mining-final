@@ -37,7 +37,8 @@ describe('Test plan engine cases', () => {
     const output = engine.getResourceAnalysis(handoffFixture());
     expect(output.resources.map(({ resource, rawEvents }) => [resource, rawEvents])).toEqual([['R1', 1], ['R2', 2]]);
     expect(output).toMatchObject({ knownRawEvents: 3, totalRawEvents: 4, knownInstances: 3, totalInstances: 4 });
-    expect(output.handoffs).toEqual([{ from: 'R1', to: 'R2', count: 1, caseKeys: [key('C1')] }]);
+    expect(output.handoffs).toEqual([{ from: 'R1', to: 'R2', count: 1, caseKeys: [key('C1')],
+        activityPairs: [{ from: 'A', to: 'B', count: 1, caseKeys: [key('C1')] }] }]);
   });
 
   test('T04 measures service, matched transition and inter-event time independently', () => {
@@ -92,7 +93,7 @@ describe('Test plan engine cases', () => {
     expect(imported.issues.map(issue => issue.code)).toEqual(Array(3).fill('ambiguous_lifecycle'));
     const traces = engine.groupCases(imported.events);
     expect(traces[0].sequence.map(event => event.activity)).toEqual(['A']);
-    expect(engine.getPerformance(traces)).toEqual({ gaps: [], overlaps: 0, matchedPairs: 0, ambiguousPairs: 1 });
+    expect(engine.getPerformance(traces)).toEqual({ gaps: [], overlaps: 0, matchedPairs: 0, ambiguousPairs: 1, transitionCoverage: [] });
   });
 
   test('T08 excludes invalid dates and duplicate IDs, also flags missing resource coverage', () => {
@@ -136,14 +137,17 @@ describe('Test plan engine cases', () => {
 
   test('T17 graph-ready data preserves reverse directions and per-edge case evidence', () => {
     expect(engine.getResourceAnalysis(handoffFixture()).handoffs)
-      .toEqual([{ from: 'R1', to: 'R2', count: 1, caseKeys: [key('C1')] }]);
+      .toEqual([{ from: 'R1', to: 'R2', count: 1, caseKeys: [key('C1')],
+        activityPairs: [{ from: 'A', to: 'B', count: 1, caseKeys: [key('C1')] }] }]);
     const traces = tracesOf([
       row('C1', 'A', 0, { resource: 'R2' }), row('C1', 'B', 1, { resource: 'R1' }),
       row('C2', 'A', 0, { resource: 'R1' }), row('C2', 'B', 1, { resource: 'R2' }),
     ]);
     expect(engine.getResourceAnalysis(traces).handoffs).toEqual([
-      { from: 'R2', to: 'R1', count: 1, caseKeys: [key('C1')] },
-      { from: 'R1', to: 'R2', count: 1, caseKeys: [key('C2')] },
+      { from: 'R2', to: 'R1', count: 1, caseKeys: [key('C1')],
+        activityPairs: [{ from: 'A', to: 'B', count: 1, caseKeys: [key('C1')] }] },
+      { from: 'R1', to: 'R2', count: 1, caseKeys: [key('C2')],
+        activityPairs: [{ from: 'A', to: 'B', count: 1, caseKeys: [key('C2')] }] },
     ]);
   });
 });

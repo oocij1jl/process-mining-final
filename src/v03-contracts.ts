@@ -1,6 +1,7 @@
 import type {
   CaseKey,
   Edge,
+  FestivalKPIConfig,
   GateInput,
   ImportOptions,
   Issue,
@@ -57,6 +58,22 @@ export interface EventEvidenceRef {
   caseKey: CaseKey;
   timestampMs: number;
   sourceOrder: number;
+}
+
+export interface FestivalReadinessLink {
+  festivalId: string | null;
+  performanceId: string | null;
+  linkStatus: 'linked' | 'missing_key' | 'missing_stage' | 'ambiguous_stage' | 'stage_scope_unavailable';
+  stageCaseKey: CaseKey | null;
+  equipmentCaseKey: CaseKey;
+  stageSetupStart: EventEvidenceRef | null;
+  stageReady: EventEvidenceRef | null;
+  stageDeadlineMs: number | null;
+  stageOnTime: boolean | null;
+  equipmentReady: EventEvidenceRef | null;
+  equipmentDeadlineMs: number | null;
+  equipmentDeadlineSource: NonNullable<FestivalKPIConfig['equipmentDeadline']>;
+  equipmentOnTime: boolean | null;
 }
 
 export interface LifecycleIntervalEvidence {
@@ -365,6 +382,11 @@ export interface BpmnComparison {
 /** Planned runtime exports from src/engine/index.ts. Providers may implement a subset. */
 export interface V03EngineApi {
   importXes(bytes: Uint8Array, options: XesImportOptions): XesImportResult;
+  getFestivalReadinessLinks(
+    traces: readonly Trace[],
+    config: FestivalKPIConfig,
+    processKey: 'stage' | 'equipment',
+  ): FestivalReadinessLink[];
   getActivityEvidence(traces: readonly Trace[]): ActivityEvidenceAnalysis;
   scoreAutomation(
     analysis: ActivityEvidenceAnalysis,
